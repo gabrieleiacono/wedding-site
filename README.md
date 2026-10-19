@@ -46,7 +46,11 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/typewriter.js` | Typewriter model, LCD, paper, RSVP flow |
 | `src/teletext.js`, `src/tennis.js` | Teletext engine + pages, AV tennis |
 | `src/tv.js`, `src/bookshelf.js` | East and south walls |
-| `src/window-view.js` | The living window (Canvas2D ink layers at real depths for parallax) |
+| `src/landscape.js` | The view from the window: 3D terrain, fields, trees, casale, chapel, hill town, viaduct and trains, sky and clouds |
+| `src/creatures.js` | Articulated donkeys, foals, rooster and swallows, with their little behaviours |
+| `src/typewriter-model.js` | The detailed electronic typewriter (keys, legends, LCD, paper slot) |
+| `src/phone.js` | The Sirio-style desk phone with its keypad and coiled cord |
+| `src/geo.js` | Noise and geometry helpers shared by the landscape and the animals |
 | `src/overlays.js` | Album, notebooks, cards, calendar, credits |
 | `src/audio.js` | Synthesised sounds |
 | `src/store.js` | RSVP storage (Google Sheet / claude.ai / local) |
