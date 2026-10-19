@@ -34,6 +34,16 @@ float ink_lines(vec2 p, float ang, float spacing, float phase, float seed){
   // too dense to resolve: fade to an even grey instead of moiré
   return mix(line, 0.38, smoothstep(0.3, 0.7, w));
 }
+// The five hatch families, each switched on below its light level.
+float ink_hatch(vec2 hp, float sp, float L, float seed){
+  float ink = 0.0;
+  ink = max(ink, ink_lines(hp, 0.785, sp*2.0, 0.0, seed)      * (1.0 - smoothstep(0.80, 0.92, L)));
+  ink = max(ink, ink_lines(hp, 0.785, sp*2.0, 0.5, seed+1.0)  * (1.0 - smoothstep(0.62, 0.72, L)));
+  ink = max(ink, ink_lines(hp, -0.785, sp*1.6, 0.0, seed+2.0) * (1.0 - smoothstep(0.46, 0.55, L)));
+  ink = max(ink, ink_lines(hp, 0.15, sp*1.3, 0.0, seed+3.0)   * (1.0 - smoothstep(0.30, 0.38, L)));
+  ink = max(ink, ink_lines(hp, 1.4, sp*1.1, 0.0, seed+4.0)    * (1.0 - smoothstep(0.15, 0.22, L)));
+  return ink;
+}
 `;
 
 let shaderCount = 0;
@@ -49,7 +59,10 @@ let shaderCount = 0;
  */
 export function makeInk(o = {}) {
   const mat = new THREE.MeshLambertMaterial({ color: o.color ?? '#E9C99A', side: o.side ?? THREE.FrontSide });
-  if (o.emissive) { mat.emissive = new THREE.Color(o.emissiveColor ?? o.color ?? '#ffffff'); mat.emissiveIntensity = o.emissive; }
+  if (o.map) mat.map = o.map;
+  if (o.vertexColors) mat.vertexColors = true;
+  if (o.emissiveMap) { mat.emissive = new THREE.Color(o.emissiveColor ?? '#FFD890'); mat.emissiveMap = o.emissiveMap; mat.emissiveIntensity = o.emissive ?? 0; }
+  else if (o.emissive) { mat.emissive = new THREE.Color(o.emissiveColor ?? o.color ?? '#ffffff'); mat.emissiveIntensity = o.emissive; }
   if (o.transparent) { mat.transparent = true; mat.opacity = o.opacity ?? 0.5; mat.depthWrite = false; }
   const uniforms = {
     uInk: { value: INK },
@@ -60,6 +73,9 @@ export function makeInk(o = {}) {
     uSpacing: { value: o.spacing ?? 0.0065 },
     uSeed: { value: Math.random() * 50 },
     uGrainScale: { value: o.grainScale ?? 1 },
+    uLift: { value: o.lift ?? 0 },
+    uHatch: { value: o.hatch ?? 1 },
+    uAuto: { value: o.auto ? 1 : 0 },
   };
   mat.userData.ink = uniforms;
   mat.customProgramCacheKey = () => 'ink' + (o.wood ?? 0);
@@ -77,7 +93,7 @@ export function makeInk(o = {}) {
       .replace('#include <common>', `#include <common>
 varying vec3 vInkPos;
 uniform vec3 uInk; uniform vec3 uPaper; uniform float uWash; uniform float uWood;
-uniform vec3 uGrain; uniform float uSpacing; uniform float uSeed; uniform float uGrainScale;
+uniform vec3 uGrain; uniform float uSpacing; uniform float uSeed; uniform float uGrainScale; uniform float uLift; uniform float uHatch; uniform float uAuto;
 ${NOISE_GLSL}
 ${HATCH_GLSL}
 // Herringbone parquet: planks n×1, rotated 45°. Returns (ink, tone).
@@ -106,7 +122,7 @@ vec2 ink_parquet(vec2 xz){
   vec3 base = max(diffuseColor.rgb, vec3(0.03));
   vec3 irr = (outgoingLight - totalEmissiveRadiance) / base * PI; // undo Lambert's 1/π: 1.0 = fully lit
   float L = dot(irr, vec3(0.299, 0.587, 0.114)) + dot(totalEmissiveRadiance, vec3(0.33))*1.5;
-  L += (ink_noise(hp*6.0 + uSeed) - 0.5) * 0.06;
+  L += (ink_noise(hp*6.0 + uSeed) - 0.5) * 0.06 + uLift;
   vec3 wash = mix(uPaper, base, uWash);
   float tone = 1.0;
   if (uWood > 1.5) {
@@ -128,14 +144,18 @@ vec2 ink_parquet(vec2 xz){
   }
   vec3 lit = wash * (0.62 + 0.42*clamp(irr, 0.0, 1.4)) + totalEmissiveRadiance*0.6;
   float sp = uSpacing;
-  float ink = 0.0;
-  ink = max(ink, ink_lines(hp, 0.785, sp*2.0, 0.0, uSeed)      * (1.0 - smoothstep(0.80, 0.92, L)));
-  ink = max(ink, ink_lines(hp, 0.785, sp*2.0, 0.5, uSeed+1.0)  * (1.0 - smoothstep(0.62, 0.72, L)));
-  ink = max(ink, ink_lines(hp, -0.785, sp*1.6, 0.0, uSeed+2.0) * (1.0 - smoothstep(0.46, 0.55, L)));
-  ink = max(ink, ink_lines(hp, 0.15, sp*1.3, 0.0, uSeed+3.0)   * (1.0 - smoothstep(0.30, 0.38, L)));
-  ink = max(ink, ink_lines(hp, 1.4, sp*1.1, 0.0, uSeed+4.0)    * (1.0 - smoothstep(0.15, 0.22, L)));
+  float ink;
+  if (uAuto > 0.5) {
+    // landscape: pick the hatch spacing from the pixel footprint, in octaves, so lines stay
+    // a few pixels apart from the paddock to the far hills; blend neighbouring octaves.
+    float lv = max(0.0, log2(length(fwidth(hp)) * 5.0 / sp));
+    float s0 = sp * exp2(floor(lv));
+    ink = mix(ink_hatch(hp, s0, L, uSeed), ink_hatch(hp, s0*2.0, L, uSeed+9.0), fract(lv));
+  } else {
+    ink = ink_hatch(hp, sp, L, uSeed);
+  }
   lit *= mix(1.0, 0.8, 1.0 - smoothstep(0.05, 0.2, L));
-  vec3 inkCol = mix(lit, uInk, ink*0.72);
+  vec3 inkCol = mix(lit, uInk, ink*0.72*uHatch);
   gl_FragColor = vec4(inkCol, diffuseColor.a);`);
     shaderCount++;
   };
@@ -181,19 +201,23 @@ export class InkPost {
           vec2 wob = (vec2(ink_noise(vUv*uRes/(38.0*uScale)), ink_noise(vUv*uRes/(38.0*uScale) + 7.3)) - 0.5) * 2.4 * px;
           vec2 uv = vUv + wob;
           float z = lin(uv); vec3 n = nrm(uv);
-          float ez = 0.0, en = 0.0;
-          vec2 offs[4]; offs[0] = vec2(1,0); offs[1] = vec2(-1,0); offs[2] = vec2(0,1); offs[3] = vec2(0,-1);
-          for (int i = 0; i < 4; i++) {
-            vec2 o = offs[i] * px * 1.1;
-            float zi = lin(uv + o);
-            ez = max(ez, abs(zi - z) / min(z, zi));
-            en = max(en, 1.0 - dot(n, nrm(uv + o)));
+          // depth edges from the second difference of 1/z, which is zero on any plane, so ground
+          // seen at a grazing angle far away doesn't turn into solid ink
+          float w0 = 1.0 / z;
+          float ez = 0.0, en = 0.0, ez2 = 0.0;
+          vec2 axes[2]; axes[0] = vec2(1,0); axes[1] = vec2(0,1);
+          for (int i = 0; i < 2; i++) {
+            vec2 o = axes[i] * px * 1.1;
+            float wa = 1.0 / lin(uv + o), wb = 1.0 / lin(uv - o);
+            ez = max(ez, abs(wa + wb - 2.0*w0) / min(w0, min(wa, wb)));
+            en = max(en, max(1.0 - dot(n, nrm(uv + o)), 1.0 - dot(n, nrm(uv - o))));
+            // silhouettes (centre nearer than its surroundings) get a heavier line, sampled further out
+            float wa2 = 1.0 / lin(uv + o*1.9), wb2 = 1.0 / lin(uv - o*1.9);
+            ez2 = max(ez2, (2.0*w0 - wa2 - wb2) / w0);
           }
-          // silhouettes (big depth jumps) get a heavier line by sampling further out
-          float ez2 = 0.0;
-          for (int i = 0; i < 4; i++) { float zi = lin(uv + offs[i]*px*2.0); ez2 = max(ez2, (zi - z) / z); }
           float edge = max(smoothstep(0.03, 0.07, ez), smoothstep(0.18, 0.4, en));
           edge = max(edge, smoothstep(0.08, 0.2, ez2) * 0.9);
+          edge *= mix(1.0, 0.5, smoothstep(120.0, 900.0, z));
           // tapered, broken strokes
           edge *= mix(0.55, 1.0, ink_noise(vUv*uRes/(9.0*uScale)));
           vec4 col = texture2D(tColor, vUv);

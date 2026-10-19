@@ -1,12 +1,12 @@
 // Lo Scrittoio con Vista — boot, lights, camera rig, hotspots and the frame loop.
 import * as THREE from 'three';
 import { InkPost, makeScreen } from './ink.js';
-import { buildRoom, EYE, ROOM } from './room.js';
+import { buildRoom, EYE, ROOM, WINDOW } from './room.js';
 import { buildTV } from './tv.js';
 import { buildBookshelf } from './bookshelf.js';
 import { Typewriter } from './typewriter.js';
 import { Teletext } from './teletext.js';
-import { LivingWindow } from './window-view.js';
+import { Countryside } from './landscape.js';
 import { Overlays, calendarTexture } from './overlays.js';
 import { Sound } from './audio.js';
 import { createStore } from './store.js';
@@ -26,12 +26,15 @@ const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPrefer
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
+renderer.localClippingEnabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const post = new InkPost(renderer);
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.05, 2000);
 camera.layers.enable(1);
 
+const frustum = new THREE.Frustum(), projView = new THREE.Matrix4();
+const WINDOW_BOX = new THREE.Box3(new THREE.Vector3(WINDOW.x0, WINDOW.y0, -ROOM.hz - 0.2), new THREE.Vector3(WINDOW.x1, WINDOW.y1, -ROOM.hz + 0.05));
 const sound = new Sound();
 const store = createStore();
 const overlays = new Overlays();
@@ -42,7 +45,8 @@ const teletext = new Teletext(store);
 const tv = buildTV(room, teletext);
 const shelf = buildBookshelf(room);
 const typewriter = new Typewriter(room, sound);
-const view = new LivingWindow(scene, sound);
+const view = new Countryside(scene, sound);
+if (params.has('dusk')) view.fixedDusk = +params.get('dusk');
 const cal = calendarTexture();
 const calFace = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.44), makeScreen(cal.tex));
 calFace.position.set(0.004, 0, 0); calFace.rotation.y = Math.PI / 2; anchors.calendarGroup.add(calFace);
@@ -187,11 +191,10 @@ function clickAt(x, y) {
   const ndc = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
   // creatures in the window: bray / crow on click
   const ray = new THREE.Raycaster(); ray.setFromCamera(ndc, camera);
-  ray.layers.set(1);
-  const hitPad = ray.intersectObject(view.paddockMesh)[0];
-  ray.layers.set(0);
-  const hitRoom = ray.intersectObject(room, true)[0];
-  if (hitPad && (!hitRoom || hitRoom.distance > 2.0)) { if (view.hit(view.paddockMetres(hitPad.point))) return; }
+  // the raycaster doesn't skip hidden things (the rolled-up shutter slats), so we do
+  const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
+  const hitRoom = ray.intersectObject(room, true).find((h) => shown(h.object));
+  if (view.group.visible && view.pick(ray, hitRoom ? hitRoom.distance : Infinity)) return;
   if (rig.focus) return;
   // otherwise: the nearest hotspot on screen within reach
   let best = null, bd = 90;
@@ -343,6 +346,10 @@ function frame(now) {
   // window life runs only when you can see it
   const facingNorth = Math.abs(wrap(rig.yaw)) < 1.25 && (!rig.focus || rig.focus.wall === 0);
   view.active = facingNorth;
+  // draw the countryside only when the window is somewhere in the frame
+  camera.updateMatrixWorld();
+  frustum.setFromProjectionMatrix(projView.multiplyMatrices(camera.projectionMatrix, camera.matrixWorldInverse));
+  view.setVisible(frustum.intersectsBox(WINDOW_BOX) || camera.position.z < -ROOM.hz);
   view.update(now, dt);
   updateLight();
   teletext.draw(now);
@@ -375,5 +382,11 @@ function placeHotspots() {
   }
 }
 requestAnimationFrame((t) => { last = t; frame(t); setTimeout(() => $('#loading').classList.add('gone'), 200); });
+// ?cam=x,y,z,tx,ty,tz[,fov] parks the camera anywhere (for screenshots while modelling)
+if (params.has('cam')) {
+  const v = params.get('cam').split(',').map(Number);
+  setTimeout(() => focus({ id: 'cam', wall: 0, lean: { pos: new THREE.Vector3(v[0], v[1], v[2]), target: new THREE.Vector3(v[3], v[4], v[5]), fov: v[6] || 40 } }), 100);
+  setTimeout(() => { rig.t = 1; }, 150);
+}
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
 window.__scene = { scene, camera, rig, teletext, typewriter, view, HOT, activate };

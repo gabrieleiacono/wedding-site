@@ -3,7 +3,7 @@
 // each answer types onto the sheet, Return goes to the next question, and the sheet rolls out at the end.
 import * as THREE from 'three';
 import { makeInk, makeScreen } from './ink.js';
-import { M, box, cyl, slab } from './room.js';
+import { buildTypewriterModel } from './typewriter-model.js';
 
 export const STEPS = [
   { id: 'name', q: 'COME TI CHIAMI?', label: 'NOME' },
@@ -13,7 +13,6 @@ export const STEPS = [
   { id: 'song', q: 'UNA CANZONE?', label: 'CANZONE', onlyIfComing: true },
   { id: 'message', q: 'UN MESSAGGIO?', label: 'MSG' },
 ];
-const ROWS_KEYS = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL', 'ZXCVBNM'];
 const PAPER_W = 0.21, PAPER_H = 0.297, LINE_H = 0.0135, MARGIN_TOP = 0.032, COLS = 27;
 const TEX_W = 840, TEX_H = Math.round(TEX_W * PAPER_H / PAPER_W);
 
@@ -23,7 +22,6 @@ export class Typewriter {
     this.group = new THREE.Group();
     this.group.position.set(0.0, 0.75, -1.43);
     parent.add(this.group);
-    this.keys = new Map();
     this.pressed = [];
     this.build();
     this.reset();
@@ -33,59 +31,29 @@ export class Typewriter {
 
   build() {
     const g = this.group;
-    const beige = makeInk({ color: '#D9D0BC', wash: 0.55 });
-    const beigeDark = makeInk({ color: '#BDB39C', wash: 0.6 });
-    const keyMat = makeInk({ color: '#5A5650', wash: 0.85 });
-    const keyLight = makeInk({ color: '#CFC6B0', wash: 0.6 });
-    // body: lower deck with the keyboard, raised back with the platen
-    const base = slab(0.47, 0.065, 0.36, 0.035, beige, 0.01); base.position.set(0, 0.0325, 0); g.add(base);
-    const back = slab(0.47, 0.06, 0.15, 0.03, beige, 0.012); back.position.set(0, 0.09, -0.1); g.add(back);
-    box(0.44, 0.012, 0.03, beigeDark, 0, 0.068, 0.165, g);
-    // keyboard: four rows + space bar, slightly stepped
-    ROWS_KEYS.forEach((row, r) => {
-      [...row].forEach((ch, i) => {
-        const k = box(0.024, 0.014, 0.022, r === 0 ? keyLight : keyMat, -0.16 + r * 0.008 + i * 0.033, 0.072 + (3 - r) * 0.002, -0.025 + r * 0.03, g);
-        k.userData.rest = k.position.y;
-        this.keys.set(ch, k);
-      });
-    });
-    const space = box(0.2, 0.014, 0.022, keyMat, 0, 0.072, 0.126, g); space.userData.rest = space.position.y; this.keys.set(' ', space);
-    const ret = box(0.045, 0.014, 0.05, keyLight, 0.19, 0.074, 0.05, g); ret.userData.rest = ret.position.y; this.keys.set('Enter', ret);
-    const bs = box(0.04, 0.014, 0.022, keyLight, 0.19, 0.075, -0.025, g); bs.userData.rest = bs.position.y; this.keys.set('Backspace', bs);
-    const shiftL = box(0.04, 0.014, 0.022, keyLight, -0.2, 0.073, 0.065, g); shiftL.userData.rest = shiftL.position.y;
-    // power LED
-    this.led = box(0.006, 0.004, 0.006, makeInk({ color: '#E2412F', emissive: 1.6 }), 0.21, 0.07, 0.15, g);
-
     // LCD: one line, green
-    this.lcdCanvas = document.createElement('canvas'); this.lcdCanvas.width = 1024; this.lcdCanvas.height = 96;
+    this.lcdCanvas = document.createElement('canvas'); this.lcdCanvas.width = 1024; this.lcdCanvas.height = 176;
     this.lcdTex = new THREE.CanvasTexture(this.lcdCanvas); this.lcdTex.colorSpace = THREE.SRGBColorSpace;
-    box(0.25, 0.006, 0.035, makeInk({ color: '#3A3A34', wash: 0.85 }), 0.0, 0.12, -0.03, g).rotation.x = 0.5;
-    const lcd = new THREE.Mesh(new THREE.PlaneGeometry(0.235, 0.024), makeScreen(this.lcdTex));
-    lcd.position.set(0, 0.1245, -0.029); lcd.rotation.x = -Math.PI / 2 + 0.5; // faces up, tilted towards you
-    g.add(lcd);
-    this.lcd = lcd;
+    const parts = buildTypewriterModel(g, this.lcdTex);
+    this.keys = parts.keyMap; this.head = parts.head; this.lcd = parts.lcd;
+    const slot = parts.slotPos;
 
-    // platen, knobs, paper bail
-    const platen = cyl(0.026, 0.026, 0.5, M.black, 0, 0.135, -0.12, g, 24); platen.rotation.z = Math.PI / 2;
-    for (const s of [-1, 1]) { const k = cyl(0.022, 0.022, 0.03, M.black, s * 0.265, 0.135, -0.12, g, 16); k.rotation.z = Math.PI / 2; }
-    const bail = cyl(0.003, 0.003, 0.4, M.grey, 0, 0.15, -0.1, g, 8); bail.rotation.z = Math.PI / 2;
-    // print head carrier, moves along the line
-    this.head = box(0.03, 0.03, 0.03, beigeDark, 0, 0.12, -0.085, g);
-
-    // the sheet
+    // the sheet: comes out of the paper slot, leaning back
     this.paperCanvas = document.createElement('canvas'); this.paperCanvas.width = TEX_W; this.paperCanvas.height = TEX_H;
     this.paperTex = new THREE.CanvasTexture(this.paperCanvas); this.paperTex.colorSpace = THREE.SRGBColorSpace;
     this.paperTex.anisotropy = 8;
     this.paperMat = makeScreen(this.paperTex, { transparent: true, side: THREE.DoubleSide });
     this.paper = new THREE.Mesh(new THREE.PlaneGeometry(PAPER_W, PAPER_H), this.paperMat);
     this.paperPivot = new THREE.Group();
-    this.paperPivot.position.set(0, 0.155, -0.13);
-    this.paperPivot.rotation.x = -0.28;
+    this.paperPivot.position.set(0, slot.y - 0.002, slot.z + 0.004);
+    this.paperPivot.rotation.x = -0.32;
     this.paperPivot.add(this.paper);
+    // clip the part of the sheet still inside the machine
+    this.paperMat.clippingPlanes = [new THREE.Plane(new THREE.Vector3(0, 1, 0), -(this.group.position.y + slot.y - 0.004))];
     g.add(this.paperPivot);
     // the rest of the sheet, fed from behind, stands up behind the platen
-    const backSheet = new THREE.Mesh(new THREE.PlaneGeometry(PAPER_W, 0.17), makeInk({ color: '#FBF8F0', wash: 0.1, side: THREE.DoubleSide }));
-    backSheet.position.set(0, 0.21, -0.165); backSheet.rotation.x = -0.32;
+    const backSheet = new THREE.Mesh(new THREE.PlaneGeometry(PAPER_W, 0.15), makeInk({ color: '#FBF8F0', wash: 0.1, side: THREE.DoubleSide, hatch: 0.6 }));
+    backSheet.position.set(0, slot.y + 0.07, slot.z - 0.03); backSheet.rotation.x = -0.42;
     g.add(backSheet);
   }
 
@@ -174,7 +142,7 @@ export class Typewriter {
   press(ch) {
     const k = this.keys.get(ch);
     if (!k) return;
-    k.position.y = k.userData.rest - 0.006;
+    k.position.y = k.userData.rest - 0.004;
     this.pressed.push({ k, t: performance.now() });
   }
 
@@ -210,10 +178,10 @@ export class Typewriter {
   drawLCD(now) {
     const c = this.lcdCanvas.getContext('2d');
     const flash = this.flash && now - this.flash < 400;
-    c.fillStyle = flash ? '#C9D9B8' : '#9AB094'; c.fillRect(0, 0, 1024, 96);
+    c.fillStyle = flash ? '#C9D9B8' : '#9AB094'; c.fillRect(0, 0, 1024, 176);
     c.fillStyle = 'rgba(31,42,30,0.08)';
-    for (let i = 0; i < 32; i++) c.fillRect(8 + i * 31.5, 14, 28, 68);
-    c.fillStyle = '#1F2A1E'; c.font = '700 54px "IBM Plex Mono", monospace'; c.textBaseline = 'middle';
+    for (let i = 0; i < 26; i++) c.fillRect(10 + i * 38.8, 40, 35, 96);
+    c.fillStyle = '#1F2A1E'; c.font = '700 64px "IBM Plex Mono", monospace'; c.textBaseline = 'middle';
     let text;
     if (this.finished) text = this.answers.coming ? ' GRAZIE! STAMPA IN CORSO' : ' GRAZIE LO STESSO.';
     else {
@@ -223,9 +191,9 @@ export class Typewriter {
       const cursor = Math.floor(now / 450) % 2 ? '_' : ' ';
       const display = this.answers.coming === false && st.id === 'message' ? 3 : shown;
       text = `${display}/${total} ${st.q} ${this.value.toUpperCase()}${cursor}`;
-      if (text.length > 32) text = text.slice(text.length - 32);
+      if (text.length > 26) text = text.slice(text.length - 26);
     }
-    c.fillText(text, 12, 50);
+    c.fillText(text, 12, 90);
     this.lcdTex.needsUpdate = true;
   }
   updatePaper() {
@@ -243,7 +211,7 @@ export class Typewriter {
       this.paperMat.opacity = 1 - Math.max(0, (t - 0.6) / 0.4);
     }
     this.updatePaper();
-    this.head.position.x = -0.1 + Math.min(1, this.col / COLS) * 0.2;
+    this.head.position.x = -0.15 + Math.min(1, this.col / COLS) * 0.3;
     for (let i = this.pressed.length - 1; i >= 0; i--) {
       const { k, t } = this.pressed[i];
       if (now - t > 90) { k.position.y = k.userData.rest; this.pressed.splice(i, 1); }

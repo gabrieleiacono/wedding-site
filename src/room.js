@@ -3,6 +3,7 @@
 import * as THREE from 'three';
 import { makeInk } from './ink.js';
 import { STORIES } from './content.js';
+import { buildSirio } from './phone.js';
 
 export const ROOM = { w: 4.2, d: 3.6, h: 2.9, hx: 2.1, hz: 1.8 };
 export const WINDOW = { x0: -0.62, x1: 0.62, y0: 0.88, y1: 2.35 };
@@ -66,6 +67,42 @@ export function slab(w, h, d, r, mat, bevel = 0.006) {
   s.lineTo(x, y + r); s.quadraticCurveTo(x, y, x + r, y);
   const g = new THREE.ExtrudeGeometry(s, { depth: h - 2 * bevel, bevelEnabled: true, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 6 });
   g.rotateX(-Math.PI / 2); g.translate(0, -h / 2 + bevel, 0);
+  const m = new THREE.Mesh(g, mat);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+
+/**
+ * Extrude a side profile across the width. `pts` are [z, y] pairs (z forward, y up); the solid spans x ∈ [-w/2, w/2].
+ */
+export function profile(pts, w, mat, bevel = 0.004) {
+  const s = new THREE.Shape(pts.map(([z, y]) => new THREE.Vector2(z, y)));
+  const g = new THREE.ExtrudeGeometry(s, { depth: w - 2 * bevel, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 8 });
+  g.rotateY(-Math.PI / 2); g.translate(w / 2 - bevel, 0, 0);
+  const m = new THREE.Mesh(g, mat);
+  m.castShadow = true; m.receiveShadow = true;
+  return m;
+}
+
+/** Rounded profile helper: a polygon with each corner rounded by r (quadratic). Returns Vector2 shape points. */
+export function roundedShape(pts, r) {
+  const s = new THREE.Shape();
+  const n = pts.length;
+  for (let i = 0; i < n; i++) {
+    const p = new THREE.Vector2(...pts[i]), a = new THREE.Vector2(...pts[(i + n - 1) % n]), b = new THREE.Vector2(...pts[(i + 1) % n]);
+    const ra = Math.min(r, p.distanceTo(a) / 2), rb = Math.min(r, p.distanceTo(b) / 2);
+    const p1 = p.clone().add(a.clone().sub(p).setLength(ra)), p2 = p.clone().add(b.clone().sub(p).setLength(rb));
+    if (i === 0) s.moveTo(p1.x, p1.y); else s.lineTo(p1.x, p1.y);
+    s.quadraticCurveTo(p.x, p.y, p2.x, p2.y);
+  }
+  s.closePath();
+  return s;
+}
+
+/** Extrude a Shape (in x/y) by depth along z, centred on z. */
+export function extrude(shape, depth, mat, bevel = 0.003, seg = 3) {
+  const g = new THREE.ExtrudeGeometry(shape, { depth: Math.max(0.0001, depth - 2 * bevel), bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: seg, curveSegments: 10 });
+  g.translate(0, 0, -depth / 2 + bevel);
   const m = new THREE.Mesh(g, mat);
   m.castShadow = true; m.receiveShadow = true;
   return m;
@@ -248,17 +285,45 @@ function buildDesk(room, anchors) {
 function buildWestWall(room, anchors) {
   const g = new THREE.Group(); room.add(g);
   const x = -ROOM.hx;
-  // the plain panelled door with a brass handle, no signs
+  // the plain panelled door: moulded architrave, four fielded panels, brass lever, keyhole and hinges, no signs
   const dz = 0.42, dw = 0.86, dh = 2.08;
-  box(0.06, dh + 0.08, dw + 0.16, M.frame, x + 0.02, (dh + 0.08) / 2, dz, g);
-  const door = box(0.04, dh, dw, M.door, x + 0.05, dh / 2, dz, g);
-  for (const [py, ph] of [[0.55, 0.75], [1.5, 0.8]]) {
-    box(0.012, ph, dw - 0.22, M.door, x + 0.075, py, dz, g);
-    box(0.006, ph - 0.06, dw - 0.28, M.door, x + 0.084, py, dz, g);
+  const door = new THREE.Group(); door.position.set(x, 0, dz); g.add(door);
+  // architrave: a flat band with a rounded bead on its outer edge, and a little cornice on top
+  for (const s of [-1, 1]) {
+    box(0.018, dh + 0.1, 0.1, M.frame, 0.009, (dh + 0.1) / 2, s * (dw / 2 + 0.05), door);
+    const bead = cyl(0.012, 0.012, dh + 0.12, M.frame, 0.02, (dh + 0.12) / 2, s * (dw / 2 + 0.094), door, 10);
+    box(0.03, 0.12, 0.13, M.frame, 0.015, 0.06, s * (dw / 2 + 0.055), door); // plinth block
   }
-  const hz = dz - dw / 2 + 0.08;
-  box(0.02, 0.06, 0.12, M.brass, x + 0.08, 1.02, hz + 0.03, g);
-  cyl(0.012, 0.012, 0.11, M.brass, x + 0.11, 1.02, hz + 0.05, g, 10).rotation.x = Math.PI / 2;
+  box(0.018, 0.1, dw + 0.2, M.frame, 0.009, dh + 0.05, 0, door);
+  const top = cyl(0.012, 0.012, dw + 0.22, M.frame, 0.02, dh + 0.1, 0, door, 10); top.rotation.x = Math.PI / 2;
+  box(0.045, 0.03, dw + 0.26, M.frame, 0.022, dh + 0.125, 0, door);
+  // the gap around the leaf, then the leaf
+  box(0.012, dh, dw, M.black, 0.004, dh / 2, 0, door);
+  box(0.04, dh - 0.008, dw - 0.008, M.door, 0.026, dh / 2, 0, door);
+  // panels: a bevelled moulding frame with a raised field inside
+  const panelAt = (cz, cy, pw, ph) => {
+    const ring = new THREE.Shape(); ring.moveTo(-pw / 2, -ph / 2); ring.lineTo(pw / 2, -ph / 2); ring.lineTo(pw / 2, ph / 2); ring.lineTo(-pw / 2, ph / 2); ring.lineTo(-pw / 2, -ph / 2);
+    const hole = new THREE.Path(); hole.moveTo(-pw / 2 + 0.03, -ph / 2 + 0.03); hole.lineTo(-pw / 2 + 0.03, ph / 2 - 0.03); hole.lineTo(pw / 2 - 0.03, ph / 2 - 0.03); hole.lineTo(pw / 2 - 0.03, -ph / 2 + 0.03); hole.lineTo(-pw / 2 + 0.03, -ph / 2 + 0.03);
+    ring.holes.push(hole);
+    const mould = extrude(ring, 0.012, M.door, 0.004, 2); mould.rotation.y = Math.PI / 2; mould.position.set(0.048, cy, cz); door.add(mould);
+    const field = extrude(roundedShape([[-pw / 2 + 0.05, -ph / 2 + 0.05], [pw / 2 - 0.05, -ph / 2 + 0.05], [pw / 2 - 0.05, ph / 2 - 0.05], [-pw / 2 + 0.05, ph / 2 - 0.05]], 0.004), 0.014, M.door, 0.008, 2);
+    field.rotation.y = Math.PI / 2; field.position.set(0.046, cy, cz); door.add(field);
+  };
+  const pw = (dw - 0.3) / 2;
+  for (const s of [-1, 1]) { panelAt(s * (pw / 2 + 0.05), 1.45, pw, 0.95); panelAt(s * (pw / 2 + 0.05), 0.5, pw, 0.62); }
+  // hinges on the far edge
+  for (const hy of [0.24, 1.0, 1.84]) { cyl(0.011, 0.011, 0.11, M.brass, 0.05, hy, dw / 2 - 0.004, door, 10); cyl(0.004, 0.004, 0.13, M.brass, 0.05, hy, dw / 2 - 0.004, door, 6); }
+  // brass lever on a rose, and a separate keyhole plate below it
+  const hz = -dw / 2 + 0.08;
+  const rose = cyl(0.028, 0.03, 0.01, M.brass, 0.05, 1.02, hz, door, 18); rose.rotation.z = Math.PI / 2;
+  cyl(0.009, 0.009, 0.035, M.brass, 0.065, 1.02, hz, door, 10).rotation.z = Math.PI / 2;
+  const lever = new THREE.Mesh(new THREE.TubeGeometry(new THREE.QuadraticBezierCurve3(new THREE.Vector3(0.08, 1.02, hz), new THREE.Vector3(0.09, 1.02, hz + 0.06), new THREE.Vector3(0.085, 1.01, hz + 0.12)), 12, 0.008, 8), M.brass);
+  lever.castShadow = true; door.add(lever);
+  const plate = slab(0.09, 0.006, 0.03, 0.012, M.brass, 0.002); plate.rotation.z = Math.PI / 2; plate.position.set(0.049, 0.9, hz); door.add(plate);
+  const key = cyl(0.005, 0.005, 0.004, M.black, 0.053, 0.905, hz, door, 10); key.rotation.z = Math.PI / 2;
+  box(0.004, 0.014, 0.004, M.black, 0.053, 0.895, hz, door);
+  // a worn threshold strip
+  box(0.06, 0.012, dw + 0.04, M.frame, 0.03, 0.006, 0, door);
   anchors.door = new THREE.Vector3(x + 0.1, 1.3, dz);
 
   // coat hooks with a coat and a scarf
@@ -281,15 +346,8 @@ function buildWestWall(room, anchors) {
   const tz = -1.15;
   box(0.4, 0.025, 0.36, M.walnut, x + 0.24, 0.7, tz, g);
   for (const [ox, oz] of [[0.04, 0.04], [0.36, 0.04], [0.04, 0.32], [0.36, 0.32]]) box(0.025, 0.69, 0.025, M.walnutY, x + 0.04 + ox - 0.02, 0.345, tz - 0.18 + oz - 0.02 + 0.02, g);
-  const phone = new THREE.Group();
-  phone.position.set(x + 0.22, 0.7125, tz + 0.03); phone.rotation.y = Math.PI / 2 + 0.25;
-  const body = slab(0.2, 0.08, 0.22, 0.04, M.sirio, 0.012); body.position.y = 0.04; body.rotation.x = -0.12; phone.add(body);
-  const pad = slab(0.11, 0.012, 0.08, 0.01, M.sirioBlue, 0.003); pad.position.set(0, 0.085, 0.04); pad.rotation.x = -0.3; phone.add(pad);
-  const handset = slab(0.22, 0.04, 0.055, 0.025, M.sirio, 0.01); handset.position.set(0, 0.105, -0.045); phone.add(handset);
-  box(0.03, 0.015, 0.012, M.sirioBlue, 0, 0.12, -0.075, phone);
-  // coiled cord
-  const pts = []; for (let i = 0; i <= 80; i++) { const t = i / 80; pts.push(new THREE.Vector3(-0.11 - t * 0.05 + Math.sin(t * 60) * 0.006, 0.09 - t * 0.06, -0.04 + t * 0.1 + Math.cos(t * 60) * 0.006)); }
-  phone.add(new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts), 160, 0.003, 5), M.sirio));
+  const { group: phone, handset } = buildSirio();
+  phone.position.set(x + 0.2, 0.7125, tz + 0.02); phone.rotation.y = Math.PI / 2 + 0.25;
   g.add(phone);
   anchors.phone = new THREE.Vector3(x + 0.22, 0.85, tz + 0.03);
   anchors.phoneHandset = handset;

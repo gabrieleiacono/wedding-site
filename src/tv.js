@@ -2,7 +2,8 @@
 // VHS tapes, a film poster and a wall clock (design F4).
 import * as THREE from 'three';
 import { makeInk, makeScreen } from './ink.js';
-import { M, box, cyl, slab, ROOM } from './room.js';
+import { M, box, cyl, slab, ROOM, roundedShape, extrude } from './room.js';
+import { merge } from './geo.js';
 import { WEDDING } from './content.js';
 
 export function buildTV(room, teletext) {
@@ -22,15 +23,34 @@ export function buildTV(room, teletext) {
   const vcrTex = new THREE.CanvasTexture(vcrCanvas); vcrTex.colorSpace = THREE.SRGBColorSpace;
   const vcrScreen = new THREE.Mesh(new THREE.PlaneGeometry(0.1, 0.035), makeScreen(vcrTex));
   vcrScreen.position.set(x - 0.4 - 0.001, 0.35, z - 0.33); vcrScreen.rotation.y = -Math.PI / 2; g.add(vcrScreen);
+  {
+    // cassette flap, transport buttons, a label and little feet
+    const fx = x - 0.4;
+    box(0.006, 0.032, 0.19, M.black, fx - 0.002, 0.362, z - 0.2, g);
+    box(0.004, 0.003, 0.17, M.grey, fx - 0.005, 0.346, z - 0.2, g);
+    for (let i = 0; i < 6; i++) box(0.008, 0.01, 0.018, i === 5 ? M.red : M.grey, fx - 0.003, 0.33, z - 0.115 + i * 0.022, g);
+    box(0.008, 0.014, 0.014, M.grey, fx - 0.003, 0.36, z - 0.06, g);
+    const lab = labelTexture('VIDEO · HQ · 4 TESTINE', 256, 24, '#C9C6BE', '#45444A');
+    const l = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.011), makeScreen(lab)); l.position.set(fx - 0.0015, 0.381, z - 0.33); l.rotation.y = -Math.PI / 2; g.add(l);
+    for (const [ox, oz] of [[0.02, -0.19], [0.28, -0.19], [0.02, 0.19], [0.28, 0.19]]) box(0.03, 0.008, 0.03, M.black, fx + ox, 0.307, z - 0.25 + oz, g);
+  }
   // the grey console
   const ps = new THREE.Group(); ps.position.set(x - 0.22, 0.31, z + 0.24);
   box(0.26, 0.05, 0.27, M.grey, 0, 0.025, 0, ps);
-  box(0.12, 0.012, 0.13, makeInk({ color: '#ACA9A1', wash: 0.6 }), 0.02, 0.055, 0, ps);
+  // round disc lid with its hinge line, power / reset / open buttons, controller ports and card slots
+  const lidMat = makeInk({ color: '#ACA9A1', wash: 0.6 });
+  cyl(0.068, 0.07, 0.008, lidMat, 0.03, 0.054, 0.0, ps, 40);
+  box(0.004, 0.004, 0.11, M.darkgrey, 0.1, 0.051, 0, ps);
+  for (let i = 0; i < 5; i++) box(0.002, 0.004, 0.02, M.darkgrey, 0.03 + 0.04 * Math.cos(i * 1.2), 0.059, 0.04 * Math.sin(i * 1.2), ps);
   cyl(0.012, 0.012, 0.01, M.darkgrey, -0.09, 0.055, -0.08, ps, 12);
+  cyl(0.012, 0.012, 0.01, M.darkgrey, -0.09, 0.055, 0.08, ps, 12);
+  cyl(0.016, 0.016, 0.008, lidMat, -0.07, 0.053, 0.0, ps, 16);
+  for (const sz of [-0.055, 0.055]) { box(0.004, 0.014, 0.04, M.black, -0.131, 0.018, sz, ps); box(0.004, 0.005, 0.045, M.black, -0.131, 0.038, sz, ps); }
+  for (let i = 0; i < 7; i++) box(0.004, 0.003, 0.2, M.darkgrey, 0.11 - i * 0.006, 0.051, 0, ps);
   const led = box(0.008, 0.008, 0.008, makeInk({ color: '#3FCF5A', emissive: 1.2 }), -0.13, 0.03, 0.09, ps);
   g.add(ps);
   // controller lying on the floor, cable to the console
-  const pad = slab(0.07, 0.025, 0.15, 0.03, M.grey, 0.008); pad.position.set(x - 0.75, 0.0125, z + 0.35); pad.rotation.y = 0.4; g.add(pad);
+  const pad = buildPad(); pad.position.set(x - 0.75, 0.0, z + 0.35); pad.rotation.y = 0.4 - Math.PI / 2; g.add(pad);
   const cable = new THREE.CatmullRomCurve3([
     new THREE.Vector3(x - 0.35, 0.33, z + 0.28), new THREE.Vector3(x - 0.5, 0.2, z + 0.3), new THREE.Vector3(x - 0.55, 0.01, z + 0.32), new THREE.Vector3(x - 0.72, 0.01, z + 0.36),
   ]);
@@ -59,9 +79,29 @@ export function buildTV(room, teletext) {
   // flat glass reflection: a faint diagonal sheen
   const sheen = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.008, depthWrite: false }));
   sheen.position.copy(screen.position); sheen.position.x -= 0.002; sheen.rotation.y = -Math.PI / 2; tv.add(sheen);
-  // speaker grille strip + power LED
-  box(0.01, 0.04, 0.72, M.black, -0.255, 0.035, 0, tv);
-  box(0.006, 0.01, 0.01, makeInk({ color: '#E2412F', emissive: 1.5 }), -0.262, 0.035, 0.2, tv);
+  // bezel around the tube
+  const bezMat = makeInk({ color: '#55545A', wash: 0.8 });
+  const ring = roundedShape([[-sw / 2 - 0.03, -sh / 2 - 0.03], [sw / 2 + 0.03, -sh / 2 - 0.03], [sw / 2 + 0.03, sh / 2 + 0.03], [-sw / 2 - 0.03, sh / 2 + 0.03]], 0.04);
+  ring.holes.push(roundedShape([[-sw / 2 - 0.004, -sh / 2 - 0.004], [-sw / 2 - 0.004, sh / 2 + 0.004], [sw / 2 + 0.004, sh / 2 + 0.004], [sw / 2 + 0.004, -sh / 2 - 0.004]], 0.012));
+  const bezel = extrude(ring, 0.014, bezMat, 0.004, 2); bezel.rotation.y = -Math.PI / 2; bezel.position.set(-0.258, bh / 2 + 0.04, 0); tv.add(bezel);
+  // speaker grilles left and right of the control strip, buttons, a label and the power LED
+  const slots = [];
+  for (const s0 of [-0.37, 0.16]) for (let i = 0; i < 26; i++) { const sl = new THREE.BoxGeometry(0.006, 0.05, 0.003); sl.translate(-0.254, 0.05, s0 + i * 0.0082); slots.push([sl, '#1A1714']); }
+  tv.add(new THREE.Mesh(merge(slots), makeInk({ color: '#ffffff', vertexColors: true, wash: 0.9 })));
+  box(0.006, 0.05, 0.14, M.black, -0.253, 0.05, 0.0, tv);
+  for (let i = 0; i < 5; i++) box(0.01, 0.012, 0.016, bezMat, -0.258, 0.042, -0.05 + i * 0.024, tv);
+  box(0.012, 0.022, 0.03, M.grey, -0.258, 0.05, -0.33 - 0.01, tv);
+  box(0.006, 0.01, 0.01, makeInk({ color: '#E2412F', emissive: 1.5 }), -0.262, 0.05, -0.3, tv);
+  const badge = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.014), makeScreen(labelTexture('STEREO  ·  COLOR 32', 512, 52, '#D8D4CA', '#45444A')));
+  badge.position.set(-0.2665, 0.083, 0.24); badge.rotation.y = -Math.PI / 2; tv.add(badge);
+  // rabbit-ear antenna on top
+  const ant = new THREE.Group(); ant.position.set(0.05, 0.63, 0.1); tv.add(ant);
+  const base = new THREE.Mesh(new THREE.SphereGeometry(0.04, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), M.black); ant.add(base);
+  for (const sgn of [-1, 1]) {
+    const rod = new THREE.Mesh(new THREE.CylinderGeometry(0.0015, 0.003, 0.5, 6), M.grey);
+    rod.position.set(0, 0.24, sgn * 0.11); rod.rotation.x = sgn * 0.45; rod.castShadow = true; ant.add(rod);
+    const tip = new THREE.Mesh(new THREE.SphereGeometry(0.005, 8, 6), M.grey); tip.position.set(0, 0.47, sgn * 0.215); ant.add(tip);
+  }
   const screenWorld = new THREE.Vector3(); screen.getWorldPosition(screenWorld);
 
   // glow from the screen onto the room
@@ -111,6 +151,27 @@ export function buildTV(room, teletext) {
       led.material.emissiveIntensity = 1.2;
     },
   };
+}
+
+function labelTexture(text, w, h, fg, bg) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const x = c.getContext('2d'); x.fillStyle = bg; x.fillRect(0, 0, w, h);
+  x.fillStyle = fg; x.font = `600 ${Math.round(h * 0.62)}px "IBM Plex Sans", sans-serif`; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(text, w / 2, h / 2 + 1);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+
+// A grey 90s console pad: two grips, a d-pad, four face buttons, start/select and shoulder buttons.
+function buildPad() {
+  const p = new THREE.Group();
+  const outline = roundedShape([[-0.075, 0.025], [0.075, 0.025], [0.082, -0.02], [0.07, -0.072], [0.05, -0.08], [0.032, -0.052], [-0.032, -0.052], [-0.05, -0.08], [-0.07, -0.072], [-0.082, -0.02]], 0.018);
+  const body = extrude(outline, 0.022, M.grey, 0.007, 3); body.rotation.x = -Math.PI / 2; body.position.y = 0.011; p.add(body);
+  const dark = M.darkgrey;
+  box(0.036, 0.006, 0.012, dark, -0.048, 0.024, -0.004, p); box(0.012, 0.006, 0.036, dark, -0.048, 0.024, -0.004, p);
+  const cols = ['#3FA88A', '#D9534A', '#6A8FD0', '#D27BB0'];
+  [[0, -0.016], [0.016, 0], [0, 0.016], [-0.016, 0]].forEach(([ox, oz], i) => { cyl(0.0065, 0.0065, 0.006, dark, 0.048 + ox, 0.024, -0.004 + oz, p, 12); cyl(0.003, 0.003, 0.002, makeInk({ color: cols[i], wash: 0.9 }), 0.048 + ox, 0.0275, -0.004 + oz, p, 8); });
+  box(0.012, 0.004, 0.005, dark, -0.012, 0.023, -0.002, p).rotation.y = 0.4; box(0.012, 0.004, 0.005, dark, 0.012, 0.023, -0.002, p).rotation.y = -0.4;
+  for (const sx of [-1, 1]) for (const k of [0, 1]) box(0.028, 0.008 - k * 0.002, 0.008, dark, sx * 0.05, 0.016 + k * 0.006, 0.03 + k * 0.006, p);
+  return p;
 }
 
 function drawPoster(c) {
