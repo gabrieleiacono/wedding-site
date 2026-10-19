@@ -20,15 +20,15 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1E1B16; col
 
 #hud { position: fixed; inset: 0; pointer-events: none; }
 #hud > * { pointer-events: auto; }
-#title { position: absolute; left: 16px; top: 16px; font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; font-size: 12px; }
-#compass { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 4px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; }
+#title { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); top: calc(16px + env(safe-area-inset-top, 0px)); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; font-size: 12px; }
+#compass { position: absolute; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 4px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; }
 #compass button { width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent; color: var(--hud-fg); font-size: 22px; cursor: pointer; line-height: 1; }
 #compass button:hover { background: rgba(255, 255, 255, 0.1); }
 #wall-name { min-width: 160px; text-align: center; padding: 4px 10px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; }
-#hint { position: absolute; left: 16px; bottom: 16px; transition: opacity 0.6s; }
-#corner { position: absolute; right: 16px; bottom: 16px; display: flex; gap: 10px; }
-#back { position: absolute; left: 16px; top: 64px; }
-#help { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: center; max-width: calc(100% - 32px); }
+#hint { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transition: opacity 0.6s; }
+#corner { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; }
+#back { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); }
+#help { position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: center; max-width: calc(100% - 32px); }
 
 #hotspots { position: absolute; inset: 0; pointer-events: none; }
 .hot { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 2px solid #fff; background: rgba(240, 86, 58, 0.78); color: #fff; font: 700 13px 'IBM Plex Mono', monospace; cursor: pointer; box-shadow: 0 0 0 0 rgba(240, 86, 58, 0.6); animation: ping 2.6s infinite; padding: 0; }
@@ -108,7 +108,7 @@ body.focused .hot { display: none; }
 
 @media (max-width: 640px) {
   #title { display: none; }
-  #compass { top: 12px; }
+  #compass { top: calc(12px + env(safe-area-inset-top, 0px)); }
   #wall-name { min-width: 0; white-space: nowrap; font-size: 11px; }
   #compass { gap: 4px; }
   #hint { bottom: 70px; }
