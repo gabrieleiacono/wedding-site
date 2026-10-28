@@ -169,6 +169,7 @@ export function buildBookshelf(room) {
         }
       }
       cursor.set(id, end);
+      sg.xs = xs; sg.endX = x;
     } else if (kind === 'reserve') {
       const w = bw || xs - sg.lo;
       anchors.reserved.push({ kind: a, x0: xs - w, x1: xs, y, height: clear, z0: front + 0.01, z1: back - 0.01 });
@@ -191,14 +192,14 @@ export function buildBookshelf(room) {
   }
   // anything that didn't fit lies flat on top of the standing rows
   for (const b of leftover) {
-    const sg = segs.find((s) => s.p[0] === 'books' && s.books?.length && !s.topFull);
+    const sg = segs.find((s) => s.p[0] === 'books' && s.books?.length > 3 && !s.topFull && s.xs - s.endX > b.h / 1000 + 0.03);
     if (!sg) break;
-    const tallest = Math.max(...sg.books.map((k) => k.h)) / 1000;
+    const tallest = Math.max(...sg.books.slice(0, 12).map((k) => k.h)) / 1000;
     sg.topY = sg.topY ?? rowY(sg.row) + tallest + 0.001;
     const h = b.h / 1000, t = b.t / 1000;
-    if (sg.topY + t > rowY(sg.row) + clear - 0.01) { sg.topFull = true; continue; }
+    if (sg.topY + t > rowY(sg.row) + clear - 0.01) { sg.topFull = true; leftover.push(b); continue; }
     const m = standBook(b, 0, 0); m.rotation.z = Math.PI / 2;
-    m.position.set(sg.hi - 0.02 - h / 2 - r() * 0.03, sg.topY + t / 2, m.position.z);
+    m.position.set(sg.xs - 0.012 - h / 2 - r() * 0.01, sg.topY + t / 2, m.position.z);
     sg.topY += t;
   }
 

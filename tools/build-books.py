@@ -16,7 +16,7 @@ for path in sorted(glob.glob(os.path.join(src, 'group-*.json'))):
     for b in items if isinstance(items, list) else []:
         if not isinstance(b, dict) or not b.get('title'):
             continue
-        key = (b.get('author', '').lower(), b['title'].lower())
+        key = (b.get('author', '').lower(), b['title'].lower(), str(b.get('publisher', '')).lower(), str(b.get('series', '')).lower())
         if key in seen:
             continue
         seen.add(key)
