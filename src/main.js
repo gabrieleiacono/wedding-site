@@ -4,6 +4,7 @@ import { InkPost, makeScreen } from './ink.js';
 import { buildRoom, EYE, ROOM, WINDOW } from './room.js';
 import { buildTV } from './tv.js';
 import { buildBookshelf } from './bookshelf.js';
+import { ShelfView } from './shelfview.js';
 import { Typewriter } from './typewriter.js';
 import { Teletext } from './teletext.js';
 import { Countryside } from './landscape.js';
@@ -44,6 +45,7 @@ const { room, anchors } = buildRoom(scene);
 const teletext = new Teletext(store);
 const tv = buildTV(room, teletext);
 const shelf = buildBookshelf(room);
+const shelfView = new ShelfView({ shelf: shelf.shelf, leggimi: shelf.leggimi, sound });
 const typewriter = new Typewriter(room, sound);
 const view = new Countryside(scene, sound);
 if (params.has('dusk')) view.fixedDusk = +params.get('dusk');
@@ -86,6 +88,17 @@ const WALLS = [
 const rig = { yaw: 0, pitch: -0.15, vyaw: 0, targetYaw: null, dragging: false, focus: null, t: 0, from: null };
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const nearestWall = () => WALLS.reduce((b, w) => (Math.abs(wrap(rig.yaw - w.yaw)) < Math.abs(wrap(rig.yaw - b.yaw)) ? w : b));
+// The eye walks an oval track round the room. Each wall has a stop on the track, centred on the
+// things you can touch there; turning carries you along the track from one stop to the next.
+// Stops in wall order A (desk), B (TV), C (bookshelf), D (door), as [x, z].
+const STOPS = [[0, -0.72], [0.53, -0.55], [0.15, 0.33], [-0.9, -0.37]];
+function eyeAt(yaw, out = new THREE.Vector3()) {
+  // yaw 0, -π/2, π, π/2 → t 0, 1, 2, 3; a closed Catmull-Rom loop through the stops
+  const t = ((-yaw / (Math.PI / 2)) % 4 + 4) % 4, i = Math.floor(t), f = t - i;
+  const P = (k) => STOPS[(i + k + 4) % 4];
+  const cr = (a, b, c, d) => 0.5 * (2 * b + (c - a) * f + (2 * a - 5 * b + 4 * c - d) * f * f + (3 * b - a - 3 * c + d) * f * f * f);
+  return out.set(cr(P(-1)[0], P(0)[0], P(1)[0], P(2)[0]), EYE.y, cr(P(-1)[1], P(0)[1], P(1)[1], P(2)[1]));
+}
 function lookDir(yaw, pitch) { return new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)); }
 function turn(dir) { const w = nearestWall(); rig.targetYaw = w.yaw + dir * Math.PI / 2; }
 function setFov() {
@@ -101,13 +114,15 @@ let down = null;
 canvas.addEventListener('pointerdown', (e) => {
   sound.unlock();
   down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
+  if (shelfView.active) { shelfView.pointerDown(e); canvas.setPointerCapture(e.pointerId); return; }
   if (rig.focus) return;
   rig.dragging = true; rig.targetYaw = null; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => {
+  if (shelfView.active) shelfView.pointerMove(e);
   if (!down) return;
   const dx = e.movementX ?? 0, dy = e.movementY ?? 0;
-  down.moved += Math.abs(dx) + Math.abs(dy);
+  down.moved = Math.max(down.moved + Math.abs(dx) + Math.abs(dy), Math.hypot(e.clientX - down.x, e.clientY - down.y));
   if (!rig.dragging) return;
   const k = 0.0045 * (60 / camera.fov) ** -1;
   rig.yaw += dx * k; rig.vyaw = dx * k;
@@ -115,11 +130,14 @@ canvas.addEventListener('pointermove', (e) => {
   $('#hint').style.opacity = 0;
 });
 canvas.addEventListener('pointerup', (e) => {
+  if (shelfView.active) shelfView.pointerUp(e);
   if (rig.dragging) { rig.dragging = false; canvas.classList.remove('dragging'); }
   if (down && down.moved < 8) clickAt(e.clientX, e.clientY);
   else if (!rig.focus) { rig.yaw += rig.vyaw * 8; rig.targetYaw = nearestWall().yaw + Math.round(wrap(rig.yaw - nearestWall().yaw) / (Math.PI / 2)) * Math.PI / 2; }
   down = null;
 });
+canvas.addEventListener('pointercancel', (e) => { if (shelfView.active) shelfView.pointerUp(e); down = null; });
+canvas.addEventListener('wheel', (e) => { if (shelfView.active) shelfView.wheel(e); }, { passive: false });
 $('#compass').addEventListener('click', (e) => { const b = e.target.closest('[data-turn]'); if (b) { sound.unlock(); unfocus(); turn(+b.dataset.turn); } });
 
 // --- hotspots ----------------------------------------------------------------------------
@@ -141,8 +159,14 @@ const HOT = [
     lean: { pos: new THREE.Vector3(-1.4, 1.4, -0.4), target: anchors.calendar, fov: 45 }, go: () => overlays.calendar() },
   { n: '☎', id: 'phone', title: 'Telefono', sub: 'Domande frequenti', at: anchors.phone, wall: 3, lean: TV_LEAN, go: () => { teletext.go('700'); showRemote(true); } },
   { n: '♪', id: 'hifi', title: 'Mini hi-fi', sub: 'La playlist', at: shelf.hifi, wall: 2, go: () => overlays.playlist() },
+  { n: 'Aa', id: 'shelf', title: 'Scaffali', sub: 'Avvicinati e leggi i titoli', wall: 2, lean: shelfView.lean, go: () => { shelfView.enter(shelfAsk.ri, shelfAsk.x); shelfAsk = { ri: 0, x: null }; },
+    at: (() => { const R = shelf.shelf.rows[3]; return shelf.shelf.group.localToWorld(new THREE.Vector3(0.15, R.y + 0.12, shelf.shelf.spineZ)); })() },
   { n: '⌂', id: 'door', title: 'La porta', sub: 'Titoli di coda', at: anchors.door, wall: 3, go: () => overlays.credits() },
 ];
+const shelfHot = HOT.find((h) => h.id === 'shelf');
+let shelfAsk = { ri: 0, x: null }; // which shelf the close-up opens on: the top one, unless you tapped a book
+function enterShelf(ri = 1, x = null) { shelfAsk = { ri, x }; activate(shelfHot); }
+shelfView.onLeggimi = () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); };
 const hotWrap = $('#hotspots');
 for (const h of HOT) {
   const b = document.createElement('button');
@@ -183,9 +207,10 @@ function unfocus(quick) {
   if (h.id === 'typewriter') stopTyping();
   if (['tv', 'remote', 'console', 'phone'].includes(h.id)) showRemote(false);
   if (h.id === 'leggimi') pullBook(false);
+  if (h.id === 'shelf') { shelfView.leave(); pullBook(false); }
 }
 $('#back').addEventListener('click', () => unfocus());
-overlays.onClose = () => unfocus();
+overlays.onClose = () => { if (shelfView.active) pullBook(false); else unfocus(); };
 
 function clickAt(x, y) {
   const ndc = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
@@ -195,10 +220,16 @@ function clickAt(x, y) {
   const shown = (o) => { for (; o; o = o.parent) if (!o.visible) return false; return true; };
   const hitRoom = ray.intersectObject(room, true).find((h) => shown(h.object));
   if (view.group.visible && view.pick(ray, hitRoom ? hitRoom.distance : Infinity)) return;
+  if (shelfView.active) { if (!shelfView.multi) shelfView.tap(ray); return; }
   if (rig.focus) return;
   // otherwise: the nearest hotspot on screen within reach
   let best = null, bd = 90;
   for (const h of HOT) { if (!h.screen) continue; const d = Math.hypot(h.screen.x - x, h.screen.y - y); if (d < bd) { bd = d; best = h; } }
+  // a tap right on a book (not on a hotspot) brings you up to its shelf
+  if (bd > 40 && nearestWall() === WALLS[2]) {
+    const hit = ray.intersectObjects(shelf.shelf.meshes, false)[0], rec = shelf.shelf.bookAt(hit);
+    if (rec) { enterShelf(shelf.shelf.rows.findIndex((R) => R.row === rec.row), rec.pos.x); return; }
+  }
   if (best) activate(best);
 }
 
@@ -266,6 +297,7 @@ remote.querySelectorAll('[data-av]').forEach((b) => {
 window.addEventListener('keydown', (e) => {
   if (e.target === typer || overlays.open && e.key !== 'Escape') return;
   sound.unlock();
+  if (shelfView.active && !overlays.open && shelfView.key(e)) { e.preventDefault(); return; }
   if (e.key === 'Escape') { if (overlays.open) overlays.close(); else unfocus(); return; }
   const onTV = rig.focus && rig.focus.lean === TV_LEAN;
   if (onTV) {
@@ -318,16 +350,17 @@ if (params.has('wall')) rig.yaw = WALLS[+params.get('wall')]?.yaw ?? 0;
 // --- frame loop -------------------------------------------------------------------------------
 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 let last = performance.now();
-const tmp = new THREE.Vector3();
+const tmp = new THREE.Vector3(), eyePos = new THREE.Vector3();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   // free look: inertia + soft snap
   if (!rig.dragging && rig.targetYaw !== null) {
     const d = wrap(rig.targetYaw - rig.yaw);
-    rig.yaw += d * Math.min(1, dt * 5);
+    rig.yaw += d * Math.min(1, dt * 3.2); // unhurried, so the walk round the room reads
     if (Math.abs(d) < 0.001) { rig.yaw = rig.targetYaw; rig.targetYaw = null; }
   }
-  const freePos = EYE, freeTarget = tmp.copy(EYE).add(lookDir(rig.yaw, rig.pitch));
+  shelfView.update(dt, camera);
+  const freePos = eyeAt(rig.yaw, eyePos), freeTarget = tmp.copy(freePos).add(lookDir(rig.yaw, rig.pitch));
   if (rig.focus || (rig.from && rig.t < 1)) {
     rig.t = Math.min(1, rig.t + dt / 0.6);
     const k = ease(rig.t);
@@ -388,5 +421,10 @@ if (params.has('cam')) {
   setTimeout(() => focus({ id: 'cam', wall: 0, lean: { pos: new THREE.Vector3(v[0], v[1], v[2]), target: new THREE.Vector3(v[3], v[4], v[5]), fov: v[6] || 40 } }), 100);
   setTimeout(() => { rig.t = 1; }, 150);
 }
+// ?shelf=1 opens the close-up on that shelf (0 = top); add &book=N to take out its Nth book
+if (params.has('shelf')) setTimeout(() => {
+  enterShelf(+params.get('shelf') || 0, params.has('x') ? +params.get('x') : null);
+  if (params.has('book')) setTimeout(() => shelfView.pull(shelfView.row.books[+params.get('book')] ?? shelfView.row.books[0]), 900);
+}, 300);
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
-window.__scene = { scene, camera, rig, teletext, typewriter, view, HOT, activate };
+window.__scene = { scene, camera, rig, teletext, typewriter, view, HOT, activate, shelfView };

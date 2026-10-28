@@ -340,27 +340,33 @@ function drawTop(x, book, W, D, r) {
 // --- the atlas --------------------------------------------------------------------------------
 const PAD = 1.2; // mm of bled colour round each cell so mipmaps don't pick up neighbours
 export class SpineAtlas {
-  constructor(books, size = 4096) {
-    this.books = books; this.size = size;
-    this.canvas = document.createElement('canvas'); this.canvas.width = this.canvas.height = size;
+  /**
+   * opts.spinesOnly packs spines alone (for close-ups), opts.height makes the canvas non-square,
+   * opts.maxScale caps the px per mm, opts.secondary keeps the books' own uv (the room atlas's)
+   * untouched and only fills this.uv, opts.hatch / opts.wash tune the ink material.
+   */
+  constructor(books, size = 4096, opts = {}) {
+    this.books = books; this.size = size; this.opts = opts; this.uv = new Map();
+    this.canvas = document.createElement('canvas'); this.canvas.width = size; this.canvas.height = opts.height ?? size;
     this.tex = new THREE.CanvasTexture(this.canvas);
     this.tex.colorSpace = THREE.SRGBColorSpace; this.tex.anisotropy = 8; this.tex.generateMipmaps = true;
     this.tex.minFilter = THREE.LinearMipmapLinearFilter;
-    this.mat = makeInk({ color: '#ffffff', map: this.tex, wash: 0.9, hatch: 0.32 });
+    this.mat = makeInk({ color: '#ffffff', map: this.tex, wash: opts.wash ?? 0.9, hatch: opts.hatch ?? 0.32 });
     this.pack();
-    this.draw();
+    if (!opts.deferDraw) this.draw();
   }
   pack() {
-    // rects in mm: the spine (W×H) and the top (W×D) side by side; shelf-pack them at the largest scale that fits
-    const items = this.books.map((b) => ({ b, w: b.t + b.t + PAD * 4, h: Math.max(b.h, b.d) + PAD * 2 }));
+    // rects in mm: the spine (W×H) and, unless spinesOnly, the top (W×D) side by side; shelf-pack them at the largest scale that fits
+    const only = this.opts.spinesOnly, SW = this.canvas.width, SH = this.canvas.height;
+    const items = this.books.map((b) => ({ b, w: only ? b.t + PAD * 2 : b.t + b.t + PAD * 4, h: (only ? b.h : Math.max(b.h, b.d)) + PAD * 2 }));
     items.sort((a, b) => b.h - a.h);
-    let s = 6;
-    for (; s > 0.6; s *= 0.94) {
+    let s = this.opts.maxScale ?? 6;
+    for (; s > 0.6; s *= 0.97) {
       let x = 0, y = 0, rowH = 0, ok = true;
       for (const it of items) {
         const w = Math.ceil(it.w * s), h = Math.ceil(it.h * s);
-        if (x + w > this.size) { x = 0; y += rowH; rowH = 0; }
-        if (y + h > this.size) { ok = false; break; }
+        if (x + w > SW) { x = 0; y += rowH; rowH = 0; }
+        if (y + h > SH) { ok = false; break; }
         it.px = x; it.py = y; x += w; rowH = Math.max(rowH, h);
       }
       if (ok) break;
@@ -368,35 +374,39 @@ export class SpineAtlas {
     this.scale = s; this.items = items;
   }
   draw() {
-    const x = this.canvas.getContext('2d'), s = this.scale, S = this.size;
-    x.fillStyle = '#d8ccb4'; x.fillRect(0, 0, S, S);
+    const x = this.canvas.getContext('2d'), s = this.scale, SW = this.canvas.width, SH = this.canvas.height, only = this.opts.spinesOnly;
+    x.setTransform(1, 0, 0, 1, 0, 0);
+    x.fillStyle = '#d8ccb4'; x.fillRect(0, 0, SW, SH);
     for (const it of this.items) {
       const b = it.b, r = rng(b.seed ^ 0x9e37);
       const bg = bgOf(b.spine);
       x.save(); x.translate(it.px, it.py); x.scale(s, s);
       x.fillStyle = bg; x.fillRect(0, 0, it.w, it.h);
       x.save(); x.translate(PAD, PAD); drawSpine(x, b, b.t, b.h); x.restore();
-      x.save(); x.translate(b.t + PAD * 3, PAD); drawTop(x, b, b.t, b.d, r); x.restore();
+      if (!only) { x.save(); x.translate(b.t + PAD * 3, PAD); drawTop(x, b, b.t, b.d, r); x.restore(); }
       x.restore();
-      const U = (mmx) => (it.px + mmx * s) / S, V = (mmy) => 1 - (it.py + mmy * s) / S;
-      b.uv = {
+      const U = (mmx) => (it.px + mmx * s) / SW, V = (mmy) => 1 - (it.py + mmy * s) / SH;
+      const uv = {
         spine: [U(PAD), V(PAD + b.h), U(PAD + b.t), V(PAD)],
-        top: [U(b.t + PAD * 3), V(PAD + b.d), U(b.t * 2 + PAD * 3), V(PAD)],
         plain: [U(PAD * 0.5), V(PAD + b.h * 0.5)],
       };
+      uv.top = only ? [uv.plain[0], uv.plain[1], uv.plain[0], uv.plain[1]] : [U(b.t + PAD * 3), V(PAD + b.d), U(b.t * 2 + PAD * 3), V(PAD)];
+      this.uv.set(b, uv);
+      if (!this.opts.secondary) b.uv = uv;
     }
     this.tex.needsUpdate = true;
   }
+  dispose() { this.tex.dispose(); this.mat.dispose(); this.canvas.width = this.canvas.height = 1; }
 }
 
 /** UVs for a book box (BoxGeometry: +x,-x,+y,-y,+z,-z; the spine faces the room, -z). */
-export function bookUV(geo, b, spineFace = 5) {
+export function bookUV(geo, b, spineFace = 5, map = b.uv) {
   const uv = geo.attributes.uv;
   for (let v = 0; v < uv.count; v++) {
     const f = Math.floor(v / 4), u0 = uv.getX(v), v0 = uv.getY(v);
-    if (f === spineFace) { const [a, bb, c, d] = b.uv.spine; uv.setXY(v, a + u0 * (c - a), bb + v0 * (d - bb)); }
-    else if (f === 2) { const [a, bb, c, d] = b.uv.top; uv.setXY(v, a + u0 * (c - a), bb + v0 * (d - bb)); }
-    else uv.setXY(v, b.uv.plain[0], b.uv.plain[1]);
+    if (f === spineFace) { const [a, bb, c, d] = map.spine; uv.setXY(v, a + u0 * (c - a), bb + v0 * (d - bb)); }
+    else if (f === 2) { const [a, bb, c, d] = map.top; uv.setXY(v, a + u0 * (c - a), bb + v0 * (d - bb)); }
+    else uv.setXY(v, map.plain[0], map.plain[1]);
   }
   uv.needsUpdate = true;
 }

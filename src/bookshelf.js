@@ -58,7 +58,7 @@ export function buildBookshelf(room) {
   };
   const atlas = new SpineAtlas(books, 4096);
   const lgAtlas = new SpineAtlas([leggimiBook], 1024);
-  loadSpineFonts().then(() => { atlas.draw(); lgAtlas.draw(); });
+  const fontsReady = loadSpineFonts().then(() => { atlas.draw(); lgAtlas.draw(); });
 
   // --- shelf plan, top row first, each row in the viewer's left-to-right order ----------------
   // The viewer's left bay is world +x. A part is books (flexible), an object, or space kept free.
@@ -104,11 +104,13 @@ export function buildBookshelf(room) {
   // --- placing ------------------------------------------------------------------------------
   const placed = [];
   const spineZ = front + 0.012;
+  let rowNow = 0; // the shelf the books being placed belong to
   const standBook = (b, xr, y, tilt = 0) => {
     // xr is the world x of the book's -x face (its right side, as the viewer sees it)
     const t = b.t / 1000, h = b.h / 1000, d = b.d / 1000;
     const geo = new THREE.BoxGeometry(t, h, d); bookUV(geo, b);
     const m = new THREE.Mesh(geo, atlas.mat);
+    m.userData = { b, row: rowNow };
     const jz = rng(b.seed ^ 77)() * 0.007;
     m.position.set(xr + t / 2, y + h / 2, spineZ + jz + d / 2);
     m.rotation.z = tilt;
@@ -118,6 +120,7 @@ export function buildBookshelf(room) {
   const cursor = new Map(); // per row:bay, the world x the next part starts at (parts run towards -x)
   for (const sg of segs) {
     const id = sg.row + ':' + sg.bay;
+    rowNow = sg.row;
     const xs = cursor.get(id) ?? sg.hi;
     const y = rowY(sg.row);
     const [kind, a, bw] = sg.p;
@@ -194,6 +197,7 @@ export function buildBookshelf(room) {
   for (const b of leftover) {
     const sg = segs.find((s) => s.p[0] === 'books' && s.books?.length > 3 && !s.topFull && s.xs - s.endX > b.h / 1000 + 0.03);
     if (!sg) break;
+    rowNow = sg.row;
     const tallest = Math.max(...sg.books.slice(0, 12).map((k) => k.h)) / 1000;
     sg.topY = sg.topY ?? rowY(sg.row) + tallest + 0.001;
     const h = b.h / 1000, t = b.t / 1000;
@@ -233,19 +237,99 @@ export function buildBookshelf(room) {
     anchors.hifiDisplay = disp;
   }
 
-  // every book shares the atlas material, so draw them all in one go
-  const pos = [], nrm = [], uvs = [];
-  for (const m of placed) {
-    m.updateMatrix();
-    const geo = m.geometry.toNonIndexed().applyMatrix4(m.matrix);
-    pos.push(...geo.attributes.position.array); nrm.push(...geo.attributes.normal.array); uvs.push(...geo.attributes.uv.array);
-    g.remove(m); m.geometry.dispose();
+  // Every book on a shelf shares one material, so each shelf is drawn as two meshes: the spines
+  // (which can swap to a sharper texture for close-ups) and everything else.
+  const rows = [], recs = [], meshes = [];
+  const byRow = new Map();
+  for (const m of placed) { const k = m.userData.row; if (!byRow.has(k)) byRow.set(k, []); byRow.get(k).push(m); }
+  for (const [row, ms] of [...byRow].sort((a, b) => b[0] - a[0])) {
+    const part = () => ({ pos: [], nrm: [], uv: [], owner: [] });
+    const body = part(), sp = part(), local = [];
+    const list = [];
+    for (const m of ms) {
+      m.updateMatrix();
+      const b = m.userData.b, geo = m.geometry.toNonIndexed().applyMatrix4(m.matrix);
+      const rec = { i: recs.length, b, row, pos: m.position.clone(), quat: m.quaternion.clone(), flat: Math.abs(Math.sin(m.rotation.z)) > 0.7,
+        body: [body.pos.length / 3, 30], spine: [sp.pos.length / 3, 6] };
+      recs.push(rec); list.push(rec);
+      const P = geo.attributes.position.array, N = geo.attributes.normal.array, U = geo.attributes.uv.array;
+      const [a, bb, c, d] = b.uv.spine;
+      for (let v = 0; v < 36; v++) {
+        // BoxGeometry's sixth face (-z) is the spine: non-indexed vertices 30..35
+        const t = v >= 30 ? sp : body;
+        t.pos.push(P[v * 3], P[v * 3 + 1], P[v * 3 + 2]); t.nrm.push(N[v * 3], N[v * 3 + 1], N[v * 3 + 2]); t.uv.push(U[v * 2], U[v * 2 + 1]);
+        if (v % 3 === 0) t.owner.push(rec.i);
+        if (t === sp) local.push((U[v * 2] - a) / (c - a), (U[v * 2 + 1] - bb) / (d - bb));
+      }
+      g.remove(m); m.geometry.dispose(); geo.dispose();
+    }
+    const mk = (t) => {
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute('position', new THREE.Float32BufferAttribute(t.pos, 3));
+      geo.setAttribute('normal', new THREE.Float32BufferAttribute(t.nrm, 3));
+      geo.setAttribute('uv', new THREE.Float32BufferAttribute(t.uv, 2));
+      const mesh = new THREE.Mesh(geo, atlas.mat); mesh.castShadow = true; mesh.receiveShadow = true; g.add(mesh);
+      mesh.userData.owner = Int32Array.from(t.owner); mesh.userData.restPos = Float32Array.from(t.pos);
+      meshes.push(mesh);
+      return mesh;
+    };
+    // viewer's left to right is world +x to -x; piles and the books lying on top go by their centre
+    list.sort((p, q) => q.pos.x - p.pos.x || p.pos.y - q.pos.y);
+    const ext = (r) => (r.flat ? r.b.h : r.b.t) / 2000;
+    rows.push({ row, y: rowY(row), books: list, body: mk(body), spines: mk(sp), local: Float32Array.from(local), roomUV: Float32Array.from(sp.uv),
+      x0: Math.min(...list.map((r) => r.pos.x - ext(r))), x1: Math.max(...list.map((r) => r.pos.x + ext(r))),
+      top: Math.max(...list.map((r) => r.pos.y + (r.flat ? r.b.t : r.b.h) / 2000)) });
   }
-  const all = new THREE.BufferGeometry();
-  all.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
-  all.setAttribute('normal', new THREE.Float32BufferAttribute(nrm, 3));
-  all.setAttribute('uv', new THREE.Float32BufferAttribute(uvs, 2));
-  const mesh = new THREE.Mesh(all, atlas.mat); mesh.castShadow = true; mesh.receiveShadow = true; g.add(mesh);
+  // --- close-ups: sharper spines for the shelf you're looking at, books taken out and put back -----
+  const coarse = typeof matchMedia !== 'undefined' && matchMedia('(pointer: coarse)').matches;
+  const sharp = new Map(); // row -> SpineAtlas, the two most recent
+  anchors.shelf = {
+    rows, recs, meshes, spineZ, front, group: g, fontsReady,
+    /** Swap a shelf's spines to a texture drawn at up to 12 px/mm (about 5× the room's). */
+    sharpen(R) {
+      if (sharp.has(R.row)) { const a = sharp.get(R.row); sharp.delete(R.row); sharp.set(R.row, a); return; }
+      const a = new SpineAtlas(R.books.map((r) => r.b), 4096, { spinesOnly: true, height: coarse ? 2048 : 4096, maxScale: 12, secondary: true, hatch: 0.07, wash: 0.97, deferDraw: true });
+      fontsReady.then(() => {
+        if (!sharp.has(R.row)) return;
+        a.draw();
+        const uv = new Float32Array(R.local.length);
+        let k = 0;
+        for (const rec of R.books.slice().sort((p, q) => p.spine[0] - q.spine[0])) {
+          const [u0, v0, u1, v1] = a.uv.get(rec.b).spine;
+          for (let v = rec.spine[0]; v < rec.spine[0] + 6; v++) { k = v * 2; uv[k] = u0 + R.local[k] * (u1 - u0); uv[k + 1] = v0 + R.local[k + 1] * (v1 - v0); }
+        }
+        R.spines.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+        R.spines.material = a.mat;
+      });
+      sharp.set(R.row, a);
+      while (sharp.size > 2) {
+        const [old, oa] = sharp.entries().next().value; sharp.delete(old);
+        const OR = rows.find((x) => x.row === old);
+        OR.spines.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(OR.roomUV.slice(), 2)); OR.spines.material = atlas.mat;
+        oa.dispose();
+      }
+    },
+    /** Hide a book on the shelf (it has been taken out) or put it back. */
+    setOnShelf(rec, on) {
+      const R = rows.find((x) => x.row === rec.row);
+      for (const [mesh, [v0, n]] of [[R.body, rec.body], [R.spines, rec.spine]]) {
+        const p = mesh.geometry.attributes.position, rest = mesh.userData.restPos;
+        for (let v = v0; v < v0 + n; v++) for (let c = 0; c < 3; c++) p.array[v * 3 + c] = on ? rest[v * 3 + c] : 0;
+        p.needsUpdate = true;
+      }
+    },
+    /** A loose copy of a book with its own very sharp spine, for holding up to the camera. */
+    loose(rec) {
+      const b = rec.b, a = new SpineAtlas([b], 1024, { spinesOnly: true, height: 4096, maxScale: 16, secondary: true, hatch: 0, wash: 1, deferDraw: true });
+      a.draw();
+      const geo = new THREE.BoxGeometry(b.t / 1000, b.h / 1000, b.d / 1000); bookUV(geo, b, 5, a.uv.get(b));
+      const m = new THREE.Mesh(geo, a.mat);
+      m.position.copy(rec.pos); m.quaternion.copy(rec.quat); g.add(m);
+      m.userData.dispose = () => { g.remove(m); geo.dispose(); a.dispose(); };
+      return m;
+    },
+    bookAt(hit) { const o = hit?.object?.userData?.owner; return o ? recs[o[hit.faceIndex]] : null; },
+  };
   anchors.bookCount = placed.length;
   return anchors;
 }

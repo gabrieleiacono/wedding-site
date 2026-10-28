@@ -27,6 +27,12 @@ export class Sound {
     const g = this.ctx.createGain(); g.gain.value = 0.015;
     n.connect(f); f.connect(g); g.connect(this.master); n.start();
   }
+  // a book sliding out of a tight row: a short brush of paper on paper
+  slide() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    const n = this.noise(0.3); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.setValueAtTime(900, t); f.frequency.linearRampToValueAtTime(2400, t + 0.25); f.Q.value = 0.8;
+    n.connect(f); this.env(f, t, 0.03, 0.22, 0.22); n.start(t);
+  }
   clack() {
     if (!this.ok) return; const t = this.ctx.currentTime;
     const n = this.noise(0.05); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800 + Math.random() * 900; f.Q.value = 1.2;

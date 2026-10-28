@@ -121,3 +121,41 @@ body.focused .hot { display: none; }
   .hot .tip { display: none; }
 }
 @media (prefers-reduced-motion: reduce) { .hot { animation: none; } .credits .roll { animation-duration: 60s; } }
+
+/* wall C close-ups: the shelf view and the book you take out (shelfview.js) */
+body.shelf #corner, body.shelf #hint { display: none; }
+#shelfui { position: absolute; inset: 0; pointer-events: none; }
+#shelfui > * { pointer-events: auto; position: absolute; }
+#shelfui[hidden] { display: none; }
+.shelf-rows { right: calc(16px + env(safe-area-inset-right, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); display: flex; align-items: center; gap: 8px; padding: 4px; font: 12px 'IBM Plex Mono', monospace; letter-spacing: 0.04em; }
+.shelf-rows .btn { width: 36px; height: 36px; min-height: 36px; font-size: 13px; color: var(--hud-fg); background: transparent; border: none; border-radius: 50%; }
+.shelf-rows .btn:disabled { opacity: 0.35; cursor: default; }
+.shelf-scroll { top: 50%; transform: translateY(-50%); font-size: 22px; padding: 0; }
+.shelf-scroll[data-scroll="1"] { left: calc(12px + env(safe-area-inset-left, 0px)); }
+.shelf-scroll[data-scroll="-1"] { right: calc(12px + env(safe-area-inset-right, 0px)); }
+.shelf-hint { left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); white-space: nowrap; transition: opacity 0.6s; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
+#shelfui .authors { left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px); display: flex; gap: 2px; padding: 4px; overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
+#shelfui .authors::-webkit-scrollbar { display: none; }
+#shelfui .authors button { flex: none; border: none; background: transparent; color: var(--hud-dim); font: 500 12px 'IBM Plex Mono', monospace; padding: 0 12px; height: 36px; border-radius: 999px; cursor: pointer; }
+#shelfui .authors button.on { background: var(--accent); color: #fff; }
+#shelfui .authors button:focus-visible, .shelf-rows .btn:focus-visible { outline: 2px solid #fff; }
+#shelfui.out .shelf-scroll, #shelfui.out .shelf-hint { display: none; }
+@media (max-width: 700px) { .shelf-scroll { display: none; } .shelf-rows span { display: none; } }
+
+#bookcard { position: absolute; left: 50%; transform: translateX(-50%); width: min(600px, calc(100% - 24px)); overflow: auto; color: var(--ink);
+  background: #F4EAD3 repeating-linear-gradient(transparent 0 27px, rgba(80, 110, 160, 0.26) 27px 28px); border-radius: 4px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+  padding: 20px 26px 14px; font-family: 'Courier Prime', monospace; animation: card-in 0.5s 0.35s both; }
+#bookcard[hidden] { display: none; }
+@keyframes card-in { from { opacity: 0; transform: translate(-50%, 12px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@media (prefers-reduced-motion: reduce) { #bookcard { animation: none; } }
+#bookcard h2 { font: 700 24px/1.15 'Courier Prime', monospace; margin: 0 0 4px; text-wrap: balance; }
+#bookcard .by { font-size: 17px; margin: 0 0 12px; }
+#bookcard dl { display: grid; grid-template-columns: auto 1fr; gap: 0 14px; font-size: 15px; line-height: 28px; margin: 0; }
+#bookcard dt { color: #7A1F1A; text-transform: uppercase; font-size: 12px; letter-spacing: 0.08em; }
+#bookcard dd { margin: 0; }
+#bookcard .dim { color: #6E6253; }
+#bookcard .note { font: 500 24px/28px 'Caveat', cursive; color: #2A3C8A; margin: 6px 0 0; }
+#bookcard .bc-nav { display: flex; justify-content: space-between; gap: 8px; margin-top: 14px; }
+#bookcard .bc-nav .btn { background: var(--hud-bg); color: var(--hud-fg); border-radius: 999px; padding: 0 16px; font: 13px 'IBM Plex Sans', sans-serif; }
+#bookcard .bc-nav [data-step] { width: 44px; justify-content: center; font-size: 20px; padding: 0; }
+@media (max-width: 700px) { #bookcard { padding: 16px 16px 12px; } #bookcard h2 { font-size: 21px; } #bookcard dl { font-size: 14px; } }
