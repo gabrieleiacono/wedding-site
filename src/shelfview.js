@@ -55,7 +55,7 @@ export class ShelfView {
   setRow(ri, x = this.tx, snap = false) {
     this.ri = THREE.MathUtils.clamp(ri, 0, this.rows.length - 1);
     this.s.sharpen(this.row);
-    this.tx = x; this.ty = this.row.y + 0.115;
+    this.tx = x; this.ty = -Infinity; // the lowest view that keeps the books clear of the HUD
     this.clamp();
     if (snap) { this.x = this.tx; this.y = this.ty; }
     this.ui.querySelector('.rowpos').textContent = `${this.ri + 1}/${this.rows.length}`;
@@ -66,10 +66,11 @@ export class ShelfView {
     const R = this.row, hw = this.halfW(this.tvis), m = 0.025;
     const lo = R.x0 - m + hw, hi = R.x1 + m - hw;
     this.tx = lo > hi ? (R.x0 + R.x1) / 2 : THREE.MathUtils.clamp(this.tx, lo, hi);
-    const hv = this.tvis / 2, ylo = R.y + 0.012 + hv - 0.02, yhi = R.top + 0.02 - hv;
-    // centred in the band the HUD leaves free (it takes more of the top than of the bottom, more so on phones)
-    const centre = R.y + Math.min(R.top - R.y, 0.24) / 2 + 0.01 + this.tvis * (this.aspect() < 1 ? 0.06 : 0.03);
-    this.ty = ylo > yhi ? centre : THREE.MathUtils.clamp(this.ty, ylo, yhi);
+    // vertically, keep the books inside the band the HUD leaves free (more of the top than of the
+    // bottom, more so on phones); raising the camera lowers the books on screen
+    const v = this.tvis, phone = this.aspect() < 1, hv = v / 2;
+    const ylo = R.y - v * (phone ? 0.1 : 0.07) + hv, yhi = R.top + v * (phone ? 0.27 : 0.15) - hv;
+    this.ty = ylo > yhi ? (ylo + yhi) / 2 : THREE.MathUtils.clamp(this.ty, ylo, yhi);
   }
   pan(dxm, dym = 0) { this.tx += dxm; this.ty += dym; this.clamp(); }
   zoom(f, sx = innerWidth / 2, sy = innerHeight / 2) {
