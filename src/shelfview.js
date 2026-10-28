@@ -8,7 +8,7 @@ import { BOOK_NOTES } from './content.js';
 const FOV = 34;
 const TAN = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const VIS = { base: 0.25, min: 0.085, max: 0.34 }; // metres of shelf visible top to bottom
-const AUTHORS = ['Calvino', 'Brancati', 'Jansson', 'Le Guin', 'Dick', 'Clarke', 'Atwood', 'Roth', 'Auster', 'DeLillo', 'Wallace', 'McCarthy', 'McEwan'];
+const AUTHORS = ['Calvino', 'Brancati', 'Jansson', 'Le Guin', 'Dick', 'Clarke', 'Atwood', 'Roth', 'Auster', 'DeLillo', 'Wallace', 'McCarthy', 'McEwan', 'Haruf', 'Varie'];
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
@@ -21,7 +21,7 @@ export class ShelfView {
     this.ri = 0; this.x = 0; this.tx = 0; this.y = 0; this.ty = 0; this.vis = VIS.base; this.tvis = VIS.base; this.vx = 0;
     this.pointers = new Map(); this.pinch = null;
     this.pulled = null; this.onLeggimi = () => {};
-    this.authorKey = (b) => AUTHORS.find((a) => (b.author || '').includes(a)) ?? (b.author || '').split(' ').pop();
+    this.authorKey = (b) => (b.section ? 'Varie' : null) ?? AUTHORS.find((a) => (b.author || '').includes(a)) ?? (b.author || '').split(' ').pop();
     this.buildUI();
     // the dim veil that drops behind a book you've taken out
     this.veil = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshBasicMaterial({ color: '#140f0b', transparent: true, opacity: 0, side: THREE.DoubleSide }));

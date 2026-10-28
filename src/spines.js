@@ -84,12 +84,48 @@ function wordmark(x, text, s, col, font, w, opts = {}) {
   if (m > max) { const sc = max / m; if (sc < 0.72) { size *= sc / 0.72; x.font = `${opts.italic ? 'italic ' : ''}${opts.weight ?? 700} ${size}px "${font}"`; } x.scale(Math.max(0.72, Math.min(1, max / x.measureText(text).width)), 1); }
   x.fillText(text, 0, 0); x.restore();
 }
+// Il Battello a Vapore: a little paddle steamer in a white roundel
+function steamboat(x, s, col) {
+  x.save(); x.fillStyle = col;
+  x.beginPath(); x.moveTo(-s * 0.42, s * 0.04); x.lineTo(s * 0.42, s * 0.04); x.lineTo(s * 0.3, s * 0.24); x.lineTo(-s * 0.32, s * 0.24); x.closePath(); x.fill();
+  x.fillRect(-s * 0.26, -s * 0.1, s * 0.46, s * 0.14);
+  x.fillRect(-s * 0.06, -s * 0.36, s * 0.12, s * 0.26);
+  x.globalAlpha = 0.7; x.beginPath(); x.arc(s * 0.08, -s * 0.44, s * 0.06, 0, Math.PI * 2); x.arc(s * 0.2, -s * 0.48, s * 0.05, 0, Math.PI * 2); x.fill();
+  x.restore();
+}
+// La Spiga: an ear of wheat
+function wheatEar(x, s, col) {
+  x.save(); x.fillStyle = col; x.strokeStyle = col; x.lineWidth = s * 0.04;
+  x.beginPath(); x.moveTo(0, s * 0.46); x.lineTo(0, -s * 0.3); x.stroke();
+  for (let k = 0; k < 4; k++) for (const sd of [-1, 1]) { x.beginPath(); x.ellipse(sd * s * 0.08, -s * 0.3 + k * s * 0.16, s * 0.06, s * 0.11, sd * 0.5, 0, Math.PI * 2); x.fill(); }
+  x.beginPath(); x.ellipse(0, -s * 0.42, s * 0.05, s * 0.09, 0, 0, Math.PI * 2); x.fill();
+  x.restore();
+}
+// La nave di Teseo: a ship under one square sail
+function sailingShip(x, s, col) {
+  x.save(); x.fillStyle = col; x.strokeStyle = col; x.lineWidth = s * 0.035;
+  x.beginPath(); x.moveTo(-s * 0.42, s * 0.14); x.lineTo(s * 0.42, s * 0.14); x.quadraticCurveTo(s * 0.3, s * 0.34, 0, s * 0.34); x.quadraticCurveTo(-s * 0.3, s * 0.34, -s * 0.42, s * 0.14); x.fill();
+  x.beginPath(); x.moveTo(0, s * 0.14); x.lineTo(0, -s * 0.44); x.stroke();
+  x.beginPath(); x.moveTo(-s * 0.26, -s * 0.34); x.quadraticCurveTo(-s * 0.2, -s * 0.1, -s * 0.26, s * 0.06); x.lineTo(s * 0.26, s * 0.06); x.quadraticCurveTo(s * 0.32, -s * 0.1, s * 0.26, -s * 0.34); x.closePath(); x.fill();
+  x.restore();
+}
 /** Draw a publisher's mark centred at (cx, cy) in a spine of width w (mm). */
 export function drawLogo(x, pub, cx, cy, size, col, w) {
   const p = String(pub || '').toLowerCase().replace(/[^a-z]/g, '');
   x.save(); x.translate(cx, cy);
   const s = Math.min(size, w * 0.86);
-  if (p.includes('einaudi')) ostrich(x, s, col);
+  if (p.includes('battello')) steamboat(x, s, col);
+  else if (p === 'nn' || p.startsWith('nneditore')) { x.strokeStyle = col; x.lineWidth = s * 0.06; x.strokeRect(-s * 0.4, -s * 0.3, s * 0.8, s * 0.6); wordmark(x, 'NN', s, col, 'Libre Franklin', w, { weight: 700, k: 0.4 }); }
+  else if (p.includes('piemme')) wordmark(x, 'PIEMME', s, col, 'Libre Franklin', w, { weight: 800, k: 0.3 });
+  else if (p.includes('demetra')) wordmark(x, 'Demetra', s, col, 'Playfair Display', w, { weight: 700, italic: true, k: 0.32 });
+  else if (p.includes('manning')) wordmark(x, 'MANNING', s, col, 'Inter', w, { weight: 700, k: 0.24 });
+  else if (p.includes('littlebrown')) { wordmark(x, 'LITTLE,', s, col, 'Libre Baskerville', w, { weight: 700, k: 0.2 }); x.translate(0, s * 0.24); wordmark(x, 'BROWN', s, col, 'Libre Baskerville', w, { weight: 700, k: 0.2 }); }
+  else if (p.includes('spiga')) wheatEar(x, s, col);
+  else if (p.includes('ippocampo')) wordmark(x, "L'Ippocampo", s, col, 'EB Garamond', w, { weight: 600, italic: true, k: 0.3 });
+  else if (p.includes('saggiatore')) { wordmark(x, 'il', s, col, 'EB Garamond', w, { weight: 500, italic: true, k: 0.26 }); x.translate(0, s * 0.28); wordmark(x, 'Saggiatore', s, col, 'EB Garamond', w, { weight: 600, k: 0.3 }); }
+  else if (p.includes('nave') || p.includes('teseo')) sailingShip(x, s, col);
+  else if (p.includes('terre')) wordmark(x, 'terre di mezzo', s, col, 'Jost', w, { weight: 600, k: 0.26 });
+  else if (p.includes('einaudi')) ostrich(x, s, col);
   else if (p.includes('oscar')) { wordmark(x, 'OSCAR', s, col, 'Jost', w, { weight: 800, k: 0.36 }); x.translate(0, s * 0.42); rose(x, s * 0.42, col); }
   else if (p.includes('mondadori')) rose(x, s, col);
   else if (p.includes('urania')) { x.fillStyle = '#C8102E'; x.beginPath(); x.arc(0, 0, s * 0.48, 0, Math.PI * 2); x.fill(); wordmark(x, 'U', s, '#ffffff', 'Bodoni Moda', w, { weight: 800, k: 0.62 }); }
