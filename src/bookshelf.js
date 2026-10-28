@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { makeInk } from './ink.js';
 import { M, box, cyl, ROOM } from './room.js';
 import { BOOKS } from './books-data.js';
-import { SpineAtlas, bookUV, rng, hashStr, loadSpineFonts } from './spines.js';
+import { SpineAtlas, bookUV, rng, hashStr, loadSpineFonts, applySeries } from './spines.js';
 
 // Authors in shelf order: kept together, each in publication order.
 const AUTHOR_ORDER = ['Calvino', 'Brancati', 'Jansson', 'Le Guin', 'Dick', 'Clarke', 'Atwood', 'Roth', 'Auster', 'DeLillo', 'Wallace', 'McCarthy', 'McEwan'];
@@ -16,12 +16,12 @@ function normalise(raw, i) {
   const h = (raw.height_mm || 197), t = Math.max(6, raw.thickness_mm || 18);
   const seed = hashStr((raw.author || '') + '|' + (raw.title || '') + '|' + i);
   const r = rng(seed);
-  return {
+  return applySeries({
     ...raw, seed, h, t, d: raw.width_mm || Math.round(h * 0.64),
     binding: raw.binding || 'paperback',
     age: 0.2 + r() * 0.8, read: r(),
-    key: surname(raw.author), year: raw.first_published || raw.year || 0,
-  };
+    key: surname(raw.author), year: raw.first_published || raw.year || 0, idx: i,
+  });
 }
 
 export function buildBookshelf(room) {
@@ -43,7 +43,11 @@ export function buildBookshelf(room) {
   // --- the books, sorted by author and year --------------------------------------------------
   const books = BOOKS.map(normalise).filter((b) => b.h < clear * 1000 - 8);
   const rank = (b) => { const k = AUTHOR_ORDER.indexOf(b.key); return k < 0 ? 99 : k; };
-  books.sort((a, b) => rank(a) - rank(b) || a.key.localeCompare(b.key) || a.year - b.year || a.title.localeCompare(b.title));
+  // Within an author: by first publication where the research gives it for every book, otherwise in
+  // the research's own (chronological) order; collected editions such as the Meridiani close the run.
+  const dated = new Set(books.map((b) => b.key).filter((k) => books.every((b) => b.key !== k || b.first_published)));
+  const when = (b) => (dated.has(b.key) ? b.first_published : b.idx);
+  books.sort((a, b) => rank(a) - rank(b) || a.key.localeCompare(b.key) || !!a.house - !!b.house || when(a) - when(b) || a.title.localeCompare(b.title));
   const leggimiBook = {
     title: 'LEGGIMI', author: '', publisher: '', seed: 777, h: 270, t: 45, d: 210, binding: 'hardcover', age: 0.1, read: 0,
     spine: {

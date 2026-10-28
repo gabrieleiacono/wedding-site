@@ -121,6 +121,12 @@ export function drawLogo(x, pub, cx, cy, size, col, w) {
  */
 export function drawSpine(x, book, W, H) {
   const s = book.spine || {}, r = rng(book.seed);
+  if (book.house === 'meridiani') {
+    x.save(); x.beginPath(); x.rect(0, 0, W, H); x.clip();
+    meridiani(x, book, W, H, r); wear(x, book, W, H, r, MERIDIANI_BLACK);
+    x.restore();
+    return;
+  }
   const bg = bgOf(s);
   const ink = hex(s.text_color, lum(bg) > 0.55 ? '#1E1A17' : '#F3ECDD');
   const accent = hex(s.accent, ink);
@@ -323,6 +329,7 @@ function wear(x, book, W, H, r, bg) {
 
 /** The page block seen from above: cover boards along both long sides, cream pages between. */
 function drawTop(x, book, W, D, r) {
+  if (book.caseColor) { slipcaseTop(x, book, W, D, r); return; }
   const bg = bgOf(book.spine), hard = book.binding === 'hardcover' || book.binding === 'jacket';
   const board = hard ? 2.2 : 0.4;
   const paper = book.paper || (r() < 0.5 ? '#EFE6D2' : '#F3EBDB');
@@ -335,6 +342,173 @@ function drawTop(x, book, W, D, r) {
   x.globalAlpha = 0.22; x.fillStyle = '#6a5a40'; x.fillRect(board, D - inset - 6, W - board * 2, 6); // dust settles at the open edge
   x.globalAlpha = 1;
   if (book.ribbon) { x.fillStyle = hex(book.ribbon); x.fillRect(W * 0.4, D * 0.4, 0.9, D * 0.5); }
+}
+
+// --- house designs ----------------------------------------------------------------------------
+// A few series are drawn from their real design rather than from the research's element list.
+
+// I Meridiani (Mondadori): a black binding blocked in gold under a clear jacket, five compartments
+// between gold rules (four of them a grille of round-ended bars, the second the title panel with
+// MONDADORI at its foot), and a kraft card slipcase whose board edges frame the spine.
+export const SLIPCASE = '#C9A77B';
+const MERIDIANI_BLACK = '#1B1C1F';
+const CASE_SIDE = 1.5, CASE_END = 2; // mm of slipcase board beside and above/below the spine
+/** Fit a book to its series' house design (the Meridiani slipcase adds its board all round). */
+export function applySeries(b) {
+  if (!b.house && /meridiani/i.test(String(b.series || ''))) {
+    b.house = 'meridiani'; b.binding = 'hardcover'; b.caseColor = SLIPCASE;
+    b.h += CASE_END * 2; b.t += CASE_SIDE * 2; b.d += CASE_SIDE;
+    b.age = (b.age ?? 0.5) * 0.3; // the jacket and the case keep the sun off
+  }
+  return b;
+}
+
+function meridiani(x, book, W, H, r) {
+  const bw = W - CASE_SIDE * 2, bh = H - CASE_END * 2;
+  x.fillStyle = MERIDIANI_BLACK; x.fillRect(0, 0, W, H);
+  x.save(); x.translate(CASE_SIDE, CASE_END);
+  paperGrain(x, bw, bh, r, 0.06, 0.1); // the binding's faint leather grain
+  goldLayer(x, bw, bh, r, (g) => meridianiGold(g, book, bw, bh));
+  // the acetate jacket catches the light along the curve of the spine
+  const s = x.createLinearGradient(0, 0, bw, 0);
+  [[0, 0], [0.2, 0], [0.3, 0.09], [0.42, 0], [0.7, 0], [0.78, 0.04], [0.87, 0], [1, 0]].forEach(([u, a]) => s.addColorStop(u, `rgba(255,251,238,${a})`));
+  x.fillStyle = s; x.fillRect(0, 0, bw, bh);
+  x.restore();
+  slipcase(x, W, H, r);
+}
+
+/** The gold blocking, as plain shapes in mm (goldLayer turns them into foil). */
+function meridianiGold(g, book, w, h) {
+  g.fillStyle = '#fff'; g.strokeStyle = '#fff';
+  g.fillRect(0.7, 0.9, 0.32, h - 1.8); g.fillRect(w - 1.02, 0.9, 0.32, h - 1.8); // fillets along the hinges
+  const x0 = 1.75, cw = w - 3.5, top = 1.7, gap = 1.3, n = 5;
+  const ch = (h - top * 2 - gap * (n - 1)) / n;
+  for (let i = 0; i < n; i++) {
+    const y0 = top + i * (ch + gap);
+    g.lineWidth = 0.3; g.strokeRect(x0, y0, cw, ch);
+    if (i === 1) titlePanel(g, book, x0, y0, cw, ch);
+    else grille(g, x0 + 0.8, y0 + 0.8, cw - 1.6, ch - 1.6);
+  }
+}
+
+function grille(g, x, y, w, h) {
+  const n = Math.max(4, Math.round(w / 5.9)), gap = Math.min(1.25, w * 0.03), sw = (w - gap * (n + 1)) / n;
+  roundRect(g, x, y, w, h, 0.9); g.fill();
+  g.globalCompositeOperation = 'destination-out';
+  for (let k = 0; k < n; k++) stadium(g, x + gap + k * (sw + gap), y + gap, sw, h - gap * 2);
+  g.globalCompositeOperation = 'source-over';
+}
+
+function titlePanel(g, book, x, y, w, h) {
+  g.lineWidth = 0.22; g.strokeRect(x + 0.85, y + 0.85, w - 1.7, h - 1.7);
+  const { main, vol, sub } = volumeTitle(book.title);
+  const cx = x + w / 2, maxW = w * 0.82;
+  const size = Math.min(4.6, w * 0.104), lead = size * 1.16;
+  let author = String(book.author || '').toUpperCase();
+  if (measure(g, author, size) > maxW * 1.15) author = author.split(/\s+/).pop(); // only the surname, as on older volumes
+  const lines = [author, ...wrap(g, main.toUpperCase(), size, maxW)];
+  let cy = y + h * 0.15 + size * 0.45;
+  for (const l of lines) { gilt(g, l, cx, cy, size, maxW); cy += lead; }
+  if (sub) { gilt(g, sub, cx, cy - lead * 0.08, size * 0.8, maxW, { upper: false, track: 0.02 }); cy += lead * 0.95; }
+  const R = size * 0.34;
+  for (let k = 0; k < vol; k++) star(g, cx + (k - (vol - 1) / 2) * R * 2.5, cy - lead * 0.1, R);
+  gilt(g, 'MONDADORI', cx, y + h * 0.86, Math.min(2.3, size * 0.55), maxW, { track: 0.12 });
+}
+
+/** "Romanzi. Vol. 2: 1991-1997" → the title, the volume (drawn as stars) and what follows it. */
+function volumeTitle(t) {
+  const m = String(t).match(/^(.*?)[\s.,;:–-]*\bvol(?:ume)?\.?\s*(\d+|[ivx]+)\b\s*[:.,–-]?\s*(.*)$/i);
+  if (!m) return { main: String(t), vol: 0, sub: '' };
+  const vol = /^\d+$/.test(m[2]) ? +m[2] : { i: 1, ii: 2, iii: 3, iv: 4, v: 5 }[m[2].toLowerCase()] || 0;
+  return { main: m[1].trim(), vol: Math.min(vol, 5), sub: m[3].trim().replace(/(\d)\s*-\s*(\d)/g, '$1–$2') };
+}
+
+const giltFont = (size, o = {}) => `${o.italic ? 'italic ' : ''}${o.weight ?? 600} ${size}px "EB Garamond"`;
+function measure(g, text, size, o = {}) {
+  g.font = giltFont(size, o); if ('letterSpacing' in g) g.letterSpacing = `${((o.track ?? 0.05) * size).toFixed(3)}px`;
+  return g.measureText(text).width;
+}
+/** One centred line of blocked lettering, squeezed (then shrunk) to fit. */
+function gilt(g, text, cx, cy, size, maxW, o = {}) {
+  if (o.upper !== false) text = text.toUpperCase();
+  let m = measure(g, text, size, o), sx = 1;
+  if (m > maxW) { sx = maxW / m; if (sx < 0.8) { size *= sx / 0.8; m = measure(g, text, size, o); sx = Math.min(1, maxW / m); } }
+  g.save(); g.translate(cx, cy); g.scale(sx, 1);
+  g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(text, 0, size * 0.04);
+  g.restore();
+}
+function wrap(g, text, size, maxW) {
+  const out = [];
+  for (const w of text.split(/\s+/).filter(Boolean)) {
+    const last = out[out.length - 1];
+    if (last && measure(g, last + ' ' + w, size) <= maxW) out[out.length - 1] = last + ' ' + w; else out.push(w);
+  }
+  return out.length ? out : [''];
+}
+function star(g, cx, cy, R) {
+  g.beginPath();
+  for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? R * 0.42 : R; g.lineTo(cx + Math.cos(a) * rr, cy + Math.sin(a) * rr); }
+  g.closePath(); g.fill();
+}
+function stadium(g, x, y, w, h) {
+  const rr = w / 2;
+  g.beginPath(); g.moveTo(x, y + rr); g.arc(x + rr, y + rr, rr, Math.PI, 0); g.lineTo(x + w, y + h - rr); g.arc(x + rr, y + h - rr, rr, 0, Math.PI); g.closePath(); g.fill();
+}
+function roundRect(g, x, y, w, h, rr) {
+  g.beginPath(); g.moveTo(x + rr, y); g.arcTo(x + w, y, x + w, y + h, rr); g.arcTo(x + w, y + h, x, y + h, rr); g.arcTo(x, y + h, x, y, rr); g.arcTo(x, y, x + w, y, rr); g.closePath();
+}
+
+/**
+ * Gold foil: draw the blocking's shapes on a scratch canvas at the destination's resolution, colour
+ * them with a sheen that follows the curve of the spine, add foil grain and rub a little off.
+ */
+const FOIL = [[0, '#6E5528'], [0.12, '#A4864A'], [0.32, '#E4C886'], [0.5, '#CFAE69'], [0.78, '#A8884A'], [1, '#6A5126']];
+function goldLayer(x, w, h, r, shapes) {
+  const T = x.getTransform(), k = Math.hypot(T.a, T.b) || 1;
+  const c = document.createElement('canvas'); c.width = Math.max(1, Math.ceil(w * k)); c.height = Math.max(1, Math.ceil(h * k));
+  const g = c.getContext('2d'); g.scale(c.width / w, c.height / h);
+  shapes(g);
+  g.globalCompositeOperation = 'source-in';
+  const s = g.createLinearGradient(0, 0, w, 0); FOIL.forEach(([u, col]) => s.addColorStop(u, col));
+  g.fillStyle = s; g.fillRect(0, 0, w, h);
+  g.globalCompositeOperation = 'source-atop';
+  for (let i = 0, n = Math.floor(w * h * 1.2); i < n; i++) {
+    g.globalAlpha = 0.28 * r(); g.fillStyle = r() < 0.5 ? '#FFF2CC' : '#4A3513';
+    g.fillRect(r() * w, r() * h, 0.12 + r() * 0.25, 0.12 + r() * 0.25);
+  }
+  // worn spots, mostly at the head and tail where fingers pull the book out
+  g.globalCompositeOperation = 'destination-out';
+  for (let i = 0; i < 30; i++) {
+    const y = r() < 0.65 ? (r() < 0.5 ? r() * 8 : h - r() * 8) : r() * h;
+    g.globalAlpha = 0.2 + r() * 0.6; g.beginPath(); g.ellipse(r() * w, y, 0.2 + r() * 0.9, 0.15 + r() * 0.45, r() * 3, 0, Math.PI * 2); g.fill();
+  }
+  x.drawImage(c, 0, 0, w, h);
+  c.width = c.height = 1;
+}
+
+/** The slipcase's board edges round the spine, with a hair of shadow where the book slides in. */
+function slipcase(x, W, H, r) {
+  x.save();
+  x.fillStyle = SLIPCASE;
+  x.fillRect(0, 0, W, CASE_END); x.fillRect(0, H - CASE_END, W, CASE_END); x.fillRect(0, 0, CASE_SIDE, H); x.fillRect(W - CASE_SIDE, 0, CASE_SIDE, H);
+  x.fillStyle = 'rgba(255,248,230,0.35)'; // the cut edge is paler at the outside
+  x.fillRect(0, 0, W, 0.35); x.fillRect(0, H - 0.35, W, 0.35); x.fillRect(0, 0, 0.35, H); x.fillRect(W - 0.35, 0, 0.35, H);
+  for (let i = 0, n = Math.floor((W + H) * 6); i < n; i++) {
+    const side = Math.floor(r() * 4), along = r(), across = r();
+    const [px, py] = side === 0 ? [along * W, across * CASE_END] : side === 1 ? [along * W, H - across * CASE_END] : side === 2 ? [across * CASE_SIDE, along * H] : [W - across * CASE_SIDE, along * H];
+    x.globalAlpha = 0.25 * r(); x.fillStyle = r() < 0.5 ? '#6B4E2C' : '#F3E2C2'; x.fillRect(px, py, 0.15 + r() * 0.3, 0.15 + r() * 0.3);
+  }
+  x.globalAlpha = 1;
+  x.strokeStyle = 'rgba(18,12,6,0.7)'; x.lineWidth = 0.3;
+  x.strokeRect(CASE_SIDE - 0.1, CASE_END - 0.1, W - CASE_SIDE * 2 + 0.2, H - CASE_END * 2 + 0.2);
+  x.restore();
+}
+function slipcaseTop(x, book, W, D, r) {
+  x.fillStyle = book.caseColor; x.fillRect(0, 0, W, D);
+  for (let i = 0, n = Math.floor(W * D * 0.5); i < n; i++) { x.globalAlpha = 0.2 * r(); x.fillStyle = r() < 0.5 ? '#6B4E2C' : '#F3E2C2'; x.fillRect(r() * W, r() * D, 0.2 + r() * 0.5, 0.2 + r() * 0.5); }
+  x.globalAlpha = 0.3; x.fillStyle = '#F6E8CC'; x.fillRect(0, 0, W, 0.4); // the open end's cut edge
+  x.globalAlpha = 0.12; x.fillStyle = '#5A4630'; x.fillRect(0, D * 0.55, W, D * 0.45); // dust towards the back
+  x.globalAlpha = 1;
 }
 
 // --- the atlas --------------------------------------------------------------------------------
@@ -381,7 +555,7 @@ export class SpineAtlas {
       const b = it.b, r = rng(b.seed ^ 0x9e37);
       const bg = bgOf(b.spine);
       x.save(); x.translate(it.px, it.py); x.scale(s, s);
-      x.fillStyle = bg; x.fillRect(0, 0, it.w, it.h);
+      x.fillStyle = b.caseColor || bg; x.fillRect(0, 0, it.w, it.h); // also the colour of the book's sides
       x.save(); x.translate(PAD, PAD); drawSpine(x, b, b.t, b.h); x.restore();
       if (!only) { x.save(); x.translate(b.t + PAD * 3, PAD); drawTop(x, b, b.t, b.d, r); x.restore(); }
       x.restore();
