@@ -118,7 +118,8 @@ export function drawLogo(x, pub, cx, cy, size, col, w) {
   else if (p === 'nn' || p.startsWith('nneditore')) { x.strokeStyle = col; x.lineWidth = s * 0.06; x.strokeRect(-s * 0.4, -s * 0.3, s * 0.8, s * 0.6); wordmark(x, 'NN', s, col, 'Libre Franklin', w, { weight: 700, k: 0.4 }); }
   else if (p.includes('piemme')) wordmark(x, 'PIEMME', s, col, 'Libre Franklin', w, { weight: 800, k: 0.3 });
   else if (p.includes('demetra')) wordmark(x, 'Demetra', s, col, 'Playfair Display', w, { weight: 700, italic: true, k: 0.32 });
-  else if (p.includes('manning')) wordmark(x, 'MANNING', s, col, 'Inter', w, { weight: 700, k: 0.24 });
+  else if (p.includes('manning')) { x.fillStyle = col; for (const dx of [-1, 1]) x.fillRect(dx * s * 0.13 - s * 0.11, -s * 0.36, s * 0.22, s * 0.3); wordmark(x, 'MANNING', s, col, 'Inter', w, { weight: 800, k: 0.17 }); }
+  else if (p.includes('bodley')) { x.strokeStyle = col; x.lineWidth = s * 0.05; x.strokeRect(-s * 0.42, -s * 0.26, s * 0.84, s * 0.52); wordmark(x, 'BH', s, col, 'Inter', w, { weight: 500, k: 0.36 }); }
   else if (p.includes('littlebrown')) { wordmark(x, 'LITTLE,', s, col, 'Libre Baskerville', w, { weight: 700, k: 0.2 }); x.translate(0, s * 0.24); wordmark(x, 'BROWN', s, col, 'Libre Baskerville', w, { weight: 700, k: 0.2 }); }
   else if (p.includes('spiga')) wheatEar(x, s, col);
   else if (p.includes('ippocampo')) wordmark(x, "L'Ippocampo", s, col, 'EB Garamond', w, { weight: 600, italic: true, k: 0.3 });
