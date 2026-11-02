@@ -141,8 +141,8 @@ canvas.addEventListener('pointerup', (e) => {
 canvas.addEventListener('pointercancel', (e) => { if (shelfView.active) shelfView.pointerUp(e); down = null; rig.peeking = false; });
 // at the window you can look around a little (drag, or the arrow keys), but not turn your back on it
 function peekBy(dyaw, dpitch) {
-  rig.peek.yaw = THREE.MathUtils.clamp(rig.peek.yaw + dyaw, -0.6, 0.6);
-  rig.peek.pitch = THREE.MathUtils.clamp(rig.peek.pitch + dpitch, -0.32, 0.3);
+  rig.peek.yaw = THREE.MathUtils.clamp(rig.peek.yaw + dyaw, -0.9, 0.9);
+  rig.peek.pitch = THREE.MathUtils.clamp(rig.peek.pitch + dpitch, -0.55, 0.35);
   $('#hint').style.opacity = 0;
 }
 canvas.addEventListener('wheel', (e) => { if (shelfView.active) shelfView.wheel(e); }, { passive: false });
@@ -211,13 +211,13 @@ const TYPEWRITER_LEAN = () => {
 // TV: the whole screen, beside the remote on a desk, above it on a phone.
 const TV_PTS = around(tv.screenWorld, 0.01, 0.27, 0.35);
 const TV_LEAN = () => frameView({ pts: TV_PTS, dir: new THREE.Vector3(1, -0.07, 0), fov: portrait() ? 55 : 40, fill: 0.88 });
-// Window: lean over the desk towards the open window, still inside the room, and look out at the country.
-// A tall phone screen sees only a sliver of the window, so there you stand a little further back and
-// look a touch lower: the sill and the open casements stay in the bottom of the picture.
-const WINDOW_EYE = new THREE.Vector3(0, 1.36, -1.43), WINDOW_EYE_TALL = new THREE.Vector3(0, 1.3, -1.3);
+// Window: your face right at the open window, in the frame itself (still this side of the shutter's
+// guides), so the country fills the picture; drag or use the arrows to look along the hills or down
+// into the paddock. A wider lens on a tall phone screen.
+const WINDOW_EYE = new THREE.Vector3(0, 1.48, -ROOM.hz + 0.07);
 const WINDOW_LEAN = () => {
-  const tall = portrait(), pos = tall ? WINDOW_EYE_TALL : WINDOW_EYE;
-  return { pos, target: pos.clone().add(lookDir(rig.peekS.yaw, (tall ? -0.13 : -0.07) + rig.peekS.pitch)), fov: tall ? 70 : 56 };
+  const tall = portrait();
+  return { pos: WINDOW_EYE, target: WINDOW_EYE.clone().add(lookDir(rig.peekS.yaw, -0.1 + rig.peekS.pitch)), fov: tall ? 74 : 62 };
 };
 const ALBUM_LEAN = () => frameView({ pts: around(anchors.album, 0.19, 0.03, 0.17), dir: elev(52, 0.25), fov: 45 });
 const NOTEBOOK_LEAN = () => frameView({ pts: around(anchors.notebooks, 0.12, 0.04, 0.15), dir: elev(52, -0.25), fov: 45 });
@@ -417,7 +417,7 @@ function toggleShutter() { shutterTarget = shutterTarget > 0.1 ? 0.04 : 0.42; so
 function lookOut() {
   if (shutterTarget > 0.1) toggleShutter();
   $('#help').hidden = false;
-  $('#help').textContent = 'Trascina per guardarti intorno · tocca gli animali · Esc per tornare';
+  $('#help').textContent = narrowScreen() ? 'Trascina per guardarti intorno' : 'Trascina per guardarti intorno · tocca gli animali · Esc per tornare';
 }
 function layoutShutter() {
   const { slats, slatH } = anchors.shutter, top = 2.35, bottom = 0.88;
