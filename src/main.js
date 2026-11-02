@@ -189,7 +189,25 @@ const elev = (deg, yaw = 0) => { const e = THREE.MathUtils.degToRad(deg); return
 
 // Typewriter: from above and in front, the LCD (the question) and the sheet (your answers) filling the frame.
 let twPts = null;
-const TYPEWRITER_LEAN = () => frameView({ pts: (twPts ??= typewriter.readPoints()), dir: elev(36), fov: portrait() ? 50 : 38, fill: portrait() ? 0.94 : 0.74 }, freeBand({ keyboard: typewriter.active }));
+// While you type, the camera keeps the distance and the on-screen scale it had before the phone keyboard
+// came up: refitting into the short band above the keyboard (or, on Android, into the page the keyboard
+// shrinks) would zoom right out. It only turns so the LCD and the line being typed sit in the middle of
+// what the keyboard leaves visible.
+let twRest = null;
+const TYPEWRITER_LEAN = () => {
+  const pts = (twPts ??= typewriter.readPoints());
+  if (!typewriter.active || !twRest || twRest.W !== innerWidth) {
+    const v = frameView({ pts, dir: elev(36), fov: portrait() ? 50 : 38, fill: narrowScreen() ? 0.96 : 0.74 });
+    twRest = { v, W: innerWidth, H: innerHeight };
+    if (!typewriter.active) return v;
+  }
+  const { v, H } = twRest, kb = freeBand({ keyboard: true });
+  if (innerHeight === H && kb.bottom >= innerHeight - 66) return v; // no keyboard (a desk, or not up yet)
+  const fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(v.fov) / 2) * innerHeight / H)); // same pixels per metre
+  const typing = new THREE.Box3().setFromPoints(pts.slice(0, 6)).getCenter(new THREE.Vector3()); // the LCD and the print line
+  // a little below the middle: the answers already typed climb up the sheet and need the room above
+  return { pos: v.pos, target: typing, fov, cx: v.cx, cy: kb.top + (kb.bottom - kb.top) * 0.64 };
+};
 // TV: the whole screen, beside the remote on a desk, above it on a phone.
 const TV_PTS = around(tv.screenWorld, 0.01, 0.27, 0.35);
 const TV_LEAN = () => frameView({ pts: TV_PTS, dir: new THREE.Vector3(1, -0.07, 0), fov: portrait() ? 55 : 40, fill: 0.88 });
@@ -307,10 +325,11 @@ function clickAt(x, y) {
 // --- typewriter ------------------------------------------------------------------------
 const typer = $('#typer');
 function startTyping() {
+  twRest = null; // measure the resting close-up afresh, before the keyboard comes up
   typewriter.active = true;
   if (typewriter.finished) typewriter.reset();
   $('#help').hidden = false;
-  $('#help').textContent = 'Scrivi con la tastiera · Invio per la domanda dopo · Esc per uscire';
+  $('#help').textContent = narrowScreen() ? 'Scrivi la risposta e premi Invio' : 'Scrivi con la tastiera · Invio per la domanda dopo · Esc per uscire';
   setTimeout(() => typer.focus({ preventScroll: true }), 50);
 }
 function stopTyping() { typewriter.active = false; typer.blur(); }

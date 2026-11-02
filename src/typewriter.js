@@ -63,11 +63,11 @@ export class Typewriter {
   /** World points the camera keeps in frame while you type: the LCD, and the sheet from the print line up past the form's heading. */
   readPoints() {
     this.group.updateMatrixWorld(true);
-    const pts = [];
+    const pts = [], TEXT_W = PAPER_W - 0.03; // the typed column, not the bare margins
     for (const [x, y] of [[-0.066, -0.012], [0.066, -0.012], [-0.066, 0.012], [0.066, 0.012]]) pts.push(this.lcd.localToWorld(new THREE.Vector3(x, y, 0)));
     // the line being typed sits on the print line (the pivot); earlier lines and the heading climb above it, six questions at most
     const top = PRINT_LIFT + 5 * LINE_H + (MARGIN_TOP - 0.018) + 0.012;
-    for (const [x, y] of [[-PAPER_W / 2, -0.004], [PAPER_W / 2, -0.008], [-PAPER_W / 2, top], [PAPER_W / 2, top]]) pts.push(this.paperPivot.localToWorld(new THREE.Vector3(x, y, 0)));
+    for (const [x, y] of [[-TEXT_W / 2, -0.004], [TEXT_W / 2, -0.004], [-TEXT_W / 2, top], [TEXT_W / 2, top]]) pts.push(this.paperPivot.localToWorld(new THREE.Vector3(x, y, 0)));
     return pts;
   }
 
