@@ -14,6 +14,7 @@ export const STEPS = [
   { id: 'message', q: 'UN MESSAGGIO?', label: 'MSG' },
 ];
 const PAPER_W = 0.21, PAPER_H = 0.297, LINE_H = 0.0135, MARGIN_TOP = 0.032, COLS = 27;
+const PRINT_LIFT = 0.019; // how far above the slot the typing line shows
 const TEX_W = 840, TEX_H = Math.round(TEX_W * PAPER_H / PAPER_W);
 
 export class Typewriter {
@@ -58,6 +59,17 @@ export class Typewriter {
   }
 
   get world() { return this.group.position.clone().add(new THREE.Vector3(0, 0.1, 0)); }
+
+  /** World points the camera keeps in frame while you type: the LCD, and the sheet from the print line up past the form's heading. */
+  readPoints() {
+    this.group.updateMatrixWorld(true);
+    const pts = [];
+    for (const [x, y] of [[-0.066, -0.012], [0.066, -0.012], [-0.066, 0.012], [0.066, 0.012]]) pts.push(this.lcd.localToWorld(new THREE.Vector3(x, y, 0)));
+    // the line being typed sits on the print line (the pivot); earlier lines and the heading climb above it, six questions at most
+    const top = PRINT_LIFT + 5 * LINE_H + (MARGIN_TOP - 0.018) + 0.012;
+    for (const [x, y] of [[-PAPER_W / 2, -0.004], [PAPER_W / 2, -0.008], [-PAPER_W / 2, top], [PAPER_W / 2, top]]) pts.push(this.paperPivot.localToWorld(new THREE.Vector3(x, y, 0)));
+    return pts;
+  }
 
   reset() {
     this.answers = {};
@@ -198,8 +210,8 @@ export class Typewriter {
   }
   updatePaper() {
     const p = this.paper;
-    // the paper slides up one line per Return; rows sit at the print line (pivot origin)
-    p.position.y = -PAPER_H / 2 + MARGIN_TOP + this.paperOffset + 0.004;
+    // the paper slides up one line per Return; the line being typed sits just above the bail, where you can read it
+    p.position.y = -PAPER_H / 2 + MARGIN_TOP + this.paperOffset + PRINT_LIFT;
   }
 
   tick(now, dt) {

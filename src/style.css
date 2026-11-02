@@ -39,7 +39,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1E1B16; col
 .hot:hover .tip, .hot:focus-visible .tip { opacity: 1; }
 .hot.flip .tip { left: auto; right: 42px; }
 @keyframes ping { 0% { box-shadow: 0 0 0 0 rgba(240, 86, 58, 0.55); } 70% { box-shadow: 0 0 0 12px rgba(240, 86, 58, 0); } 100% { box-shadow: 0 0 0 0 rgba(240, 86, 58, 0); } }
-body.focused .hot { display: none; }
+body.focused .hot, body.focused #hint { display: none; }
 
 #remote { position: fixed; right: 16px; bottom: 76px; width: 220px; padding: 14px; border-radius: 26px; background: #2B2B2E; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; gap: 10px; }
 #remote[hidden] { display: none; }
@@ -119,6 +119,7 @@ body.focused .hot { display: none; }
   .tabs { flex-direction: row; overflow-x: auto; }
   .tabs button { font-size: 16px; white-space: nowrap; }
   .hot .tip { display: none; }
+  body.focused #corner { display: none; } /* in a close-up the help line needs the bottom of a phone screen */
 }
 @media (prefers-reduced-motion: reduce) { .hot { animation: none; } .credits .roll { animation-duration: 60s; } }
 

@@ -85,7 +85,8 @@ const WALLS = [
   { yaw: 0, name: 'A · La scrivania' }, { yaw: -Math.PI / 2, name: 'B · Il televisore' },
   { yaw: Math.PI, name: 'C · La libreria' }, { yaw: Math.PI / 2, name: 'D · La porta' },
 ];
-const rig = { yaw: 0, pitch: -0.15, vyaw: 0, targetYaw: null, dragging: false, focus: null, t: 0, from: null };
+const rig = { yaw: 0, pitch: -0.15, vyaw: 0, targetYaw: null, dragging: false, focus: null, t: 0, from: null,
+  lens: { fov: 60, cx: innerWidth / 2, cy: innerHeight / 2 }, peek: { yaw: 0, pitch: 0 }, peekS: { yaw: 0, pitch: 0 }, peeking: false, kbBottom: innerHeight };
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const nearestWall = () => WALLS.reduce((b, w) => (Math.abs(wrap(rig.yaw - w.yaw)) < Math.abs(wrap(rig.yaw - b.yaw)) ? w : b));
 // The eye walks an oval track round the room. Each wall has a stop on the track, centred on the
@@ -115,7 +116,7 @@ canvas.addEventListener('pointerdown', (e) => {
   sound.unlock();
   down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
   if (shelfView.active) { shelfView.pointerDown(e); canvas.setPointerCapture(e.pointerId); return; }
-  if (rig.focus) return;
+  if (rig.focus) { if (rig.focus.peek) { rig.peeking = true; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId); } return; }
   rig.dragging = true; rig.targetYaw = null; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => {
@@ -123,6 +124,7 @@ canvas.addEventListener('pointermove', (e) => {
   if (!down) return;
   const dx = e.movementX ?? 0, dy = e.movementY ?? 0;
   down.moved = Math.max(down.moved + Math.abs(dx) + Math.abs(dy), Math.hypot(e.clientX - down.x, e.clientY - down.y));
+  if (rig.peeking) { peekBy(dx * 0.004, dy * 0.004); return; }
   if (!rig.dragging) return;
   const k = 0.0045 * (60 / camera.fov) ** -1;
   rig.yaw += dx * k; rig.vyaw = dx * k;
@@ -131,37 +133,105 @@ canvas.addEventListener('pointermove', (e) => {
 });
 canvas.addEventListener('pointerup', (e) => {
   if (shelfView.active) shelfView.pointerUp(e);
-  if (rig.dragging) { rig.dragging = false; canvas.classList.remove('dragging'); }
+  if (rig.dragging || rig.peeking) { rig.dragging = rig.peeking = false; canvas.classList.remove('dragging'); }
   if (down && down.moved < 8) clickAt(e.clientX, e.clientY);
   else if (!rig.focus) { rig.yaw += rig.vyaw * 8; rig.targetYaw = nearestWall().yaw + Math.round(wrap(rig.yaw - nearestWall().yaw) / (Math.PI / 2)) * Math.PI / 2; }
   down = null;
 });
-canvas.addEventListener('pointercancel', (e) => { if (shelfView.active) shelfView.pointerUp(e); down = null; });
+canvas.addEventListener('pointercancel', (e) => { if (shelfView.active) shelfView.pointerUp(e); down = null; rig.peeking = false; });
+// at the window you can look around a little (drag, or the arrow keys), but not turn your back on it
+function peekBy(dyaw, dpitch) {
+  rig.peek.yaw = THREE.MathUtils.clamp(rig.peek.yaw + dyaw, -0.6, 0.6);
+  rig.peek.pitch = THREE.MathUtils.clamp(rig.peek.pitch + dpitch, -0.32, 0.3);
+  $('#hint').style.opacity = 0;
+}
 canvas.addEventListener('wheel', (e) => { if (shelfView.active) shelfView.wheel(e); }, { passive: false });
 $('#compass').addEventListener('click', (e) => { const b = e.target.closest('[data-turn]'); if (b) { sound.unlock(); unfocus(); turn(+b.dataset.turn); } });
 
+// --- close-ups ---------------------------------------------------------------------------
+// Each close-up names what has to be readable (a few world points), the direction you look at it
+// from, and a lens; the camera then stands just far enough back for all of it to fit in the part of
+// the screen the HUD leaves free (not under the remote, the help line or the phone keyboard). The lens
+// is shifted with a view offset so the object sits in the middle of that free band.
+const UP = new THREE.Vector3(0, 1, 0);
+const narrowScreen = () => innerWidth < 700;
+const portrait = () => innerWidth < innerHeight;
+function freeBand({ keyboard = false } = {}) {
+  const W = innerWidth, H = innerHeight;
+  const b = { left: 14, right: W - 14, top: narrowScreen() ? 112 : 74, bottom: H - 62 };
+  if (!remote.hidden) {
+    const r = remote.getBoundingClientRect();
+    if (narrowScreen()) b.bottom = Math.min(b.bottom, r.top - 10); else b.right = Math.min(b.right, r.left - 18);
+  }
+  // the phone keyboard covers the bottom of the page without resizing it: frame above it
+  if (keyboard) b.bottom = Math.min(b.bottom, rig.kbBottom - 10);
+  if (b.bottom - b.top < 120) b.top = Math.max(8, b.bottom - 120);
+  return b;
+}
+/** Where to stand so every point lands inside the band, looking along `dir` at the middle of the points. */
+function frameView({ pts, dir, fov, fill = 0.92, minDist = 0.12 }, band = freeBand()) {
+  const box = new THREE.Box3().setFromPoints(pts), target = box.getCenter(new THREE.Vector3());
+  const d = dir.clone().normalize(), r = new THREE.Vector3().crossVectors(d, UP).normalize(), u = new THREE.Vector3().crossVectors(r, d);
+  const f = (innerHeight / 2) / Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+  const hw = (band.right - band.left) / 2 * fill, hh = (band.bottom - band.top) / 2 * fill;
+  const rel = new THREE.Vector3();
+  let dist = minDist;
+  for (const p of pts) {
+    rel.subVectors(p, target);
+    const z = rel.dot(d);
+    dist = Math.max(dist, f * Math.abs(rel.dot(r)) / hw - z, f * Math.abs(rel.dot(u)) / hh - z);
+  }
+  return { pos: target.clone().addScaledVector(d, -dist), target, fov, cx: (band.left + band.right) / 2, cy: (band.top + band.bottom) / 2 };
+}
+const boxPts = (min, max) => { const p = []; for (const x of [min.x, max.x]) for (const y of [min.y, max.y]) for (const z of [min.z, max.z]) p.push(new THREE.Vector3(x, y, z)); return p; };
+const around = (c, hx, hy, hz) => boxPts(new THREE.Vector3(c.x - hx, c.y - hy, c.z - hz), new THREE.Vector3(c.x + hx, c.y + hy, c.z + hz));
+const elev = (deg, yaw = 0) => { const e = THREE.MathUtils.degToRad(deg); return new THREE.Vector3(-Math.sin(yaw) * Math.cos(e), -Math.sin(e), -Math.cos(yaw) * Math.cos(e)); };
+
+// Typewriter: from above and in front, the LCD (the question) and the sheet (your answers) filling the frame.
+let twPts = null;
+const TYPEWRITER_LEAN = () => frameView({ pts: (twPts ??= typewriter.readPoints()), dir: elev(36), fov: portrait() ? 50 : 38, fill: portrait() ? 0.94 : 0.74 }, freeBand({ keyboard: typewriter.active }));
+// TV: the whole screen, beside the remote on a desk, above it on a phone.
+const TV_PTS = around(tv.screenWorld, 0.01, 0.27, 0.35);
+const TV_LEAN = () => frameView({ pts: TV_PTS, dir: new THREE.Vector3(1, -0.07, 0), fov: portrait() ? 55 : 40, fill: 0.88 });
+// Window: lean over the desk towards the open window, still inside the room, and look out at the country.
+// A tall phone screen sees only a sliver of the window, so there you stand a little further back and
+// look a touch lower: the sill and the open casements stay in the bottom of the picture.
+const WINDOW_EYE = new THREE.Vector3(0, 1.36, -1.43), WINDOW_EYE_TALL = new THREE.Vector3(0, 1.3, -1.3);
+const WINDOW_LEAN = () => {
+  const tall = portrait(), pos = tall ? WINDOW_EYE_TALL : WINDOW_EYE;
+  return { pos, target: pos.clone().add(lookDir(rig.peekS.yaw, (tall ? -0.13 : -0.07) + rig.peekS.pitch)), fov: tall ? 70 : 56 };
+};
+const ALBUM_LEAN = () => frameView({ pts: around(anchors.album, 0.19, 0.03, 0.17), dir: elev(52, 0.25), fov: 45 });
+const NOTEBOOK_LEAN = () => frameView({ pts: around(anchors.notebooks, 0.12, 0.04, 0.15), dir: elev(52, -0.25), fov: 45 });
+const CAL_LEAN = () => frameView({ pts: around(anchors.calendar, 0.01, 0.26, 0.2), dir: new THREE.Vector3(-1, -0.04, 0), fov: 45 });
+const leggimiAt = shelf.leggimi.getWorldPosition(new THREE.Vector3());
+// LEGGIMI: the glowing book and its neighbours, so you see it come out of the row
+const LEGGIMI_LEAN = () => frameView({ pts: around(leggimiAt, 0.2, 0.2, 0.08), dir: new THREE.Vector3(0, -0.12, 1), fov: 45 });
+const HIFI_LEAN = () => frameView({ pts: around(shelf.hifi.clone().add(new THREE.Vector3(0, -0.02, 0.12)), 0.27, 0.14, 0.11), dir: new THREE.Vector3(0.15, -0.2, 1), fov: 45 });
+// Door: walk up to it, lever and panels in view, as if about to leave
+const DOOR_LEAN = () => frameView({ pts: around(new THREE.Vector3(anchors.door.x, 1.25, anchors.door.z), 0.02, 0.55, 0.5), dir: new THREE.Vector3(-1, -0.08, 0.12), fov: 50 });
+
 // --- hotspots ----------------------------------------------------------------------------
-const TV_LEAN = { pos: new THREE.Vector3(0.5, 0.95, -0.55), target: tv.screenWorld.clone().add(new THREE.Vector3(0, 0, innerWidth > 700 ? 0.13 : 0)), fov: innerWidth > 700 ? 40 : 62 };
 const HOT = [
   { n: 1, id: 'typewriter', title: 'Macchina da scrivere', sub: 'Rispondi all\'invito', at: typewriter.world, wall: 0,
-    lean: { pos: new THREE.Vector3(0, 1.13, -0.86), target: new THREE.Vector3(0, 0.86, -1.5), fov: 50 }, go: startTyping },
+    lean: TYPEWRITER_LEAN, go: startTyping },
   { n: 2, id: 'album', title: 'Album fotografico', sub: 'Le nostre foto peggiori', at: anchors.album, wall: 0,
-    lean: { pos: new THREE.Vector3(-0.35, 1.05, -0.95), target: anchors.album, fov: 50 }, go: () => overlays.album() },
+    lean: ALBUM_LEAN, go: () => overlays.album() },
   { n: 3, id: 'notebooks', title: 'Quaderni', sub: 'La nostra storia, in cinque puntate', at: anchors.notebooks, wall: 0,
-    lean: { pos: new THREE.Vector3(0.35, 1.05, -0.95), target: anchors.notebooks, fov: 50 }, go: () => overlays.notebooks() },
+    lean: NOTEBOOK_LEAN, go: () => overlays.notebooks() },
   { n: 4, id: 'tv', title: 'Televisore · Televideo', sub: 'Tutte le informazioni, pagina per pagina', at: tv.screenWorld.clone().add(new THREE.Vector3(0, 0.3, 0)), wall: 1, lean: TV_LEAN, go: () => showRemote(true) },
   { n: 5, id: 'remote', title: 'Telecomando', sub: 'Accendi il televideo', at: anchors.remote, wall: 0, lean: TV_LEAN, go: () => { sound.tvClick(); showRemote(true); } },
   { n: 6, id: 'console', title: 'Console', sub: 'Passa su AV e gioca', at: tv.ps, wall: 1, lean: TV_LEAN, go: () => { teletext.setAV(true); showRemote(true); } },
-  { n: 7, id: 'leggimi', title: 'Libreria', sub: 'Un libro brilla: LEGGIMI', at: shelf.leggimi.getWorldPosition(new THREE.Vector3()), wall: 2,
-    lean: { pos: new THREE.Vector3(0, 1.15, 0.9), target: shelf.leggimi.getWorldPosition(new THREE.Vector3()), fov: 45 }, go: () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); } },
-  { n: 8, id: 'window', title: 'Finestra', sub: 'Tira la cinghia della tapparella', at: anchors.strap, wall: 0, go: () => toggleShutter() },
+  { n: 7, id: 'leggimi', title: 'Libreria', sub: 'Un libro brilla: LEGGIMI', at: leggimiAt, wall: 2,
+    lean: LEGGIMI_LEAN, go: () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); } },
+  { n: 8, id: 'window', title: 'Finestra', sub: 'Alza la tapparella e affacciati', at: anchors.strap, wall: 0, lean: WINDOW_LEAN, peek: true, go: lookOut },
   { n: 9, id: 'calendar', title: 'Calendario', sub: 'Quanto manca?', at: anchors.calendar, wall: 3,
-    lean: { pos: new THREE.Vector3(-1.4, 1.4, -0.4), target: anchors.calendar, fov: 45 }, go: () => overlays.calendar() },
+    lean: CAL_LEAN, go: () => overlays.calendar() },
   { n: '☎', id: 'phone', title: 'Telefono', sub: 'Domande frequenti', at: anchors.phone, wall: 3, lean: TV_LEAN, go: () => { teletext.go('700'); showRemote(true); } },
-  { n: '♪', id: 'hifi', title: 'Mini hi-fi', sub: 'La playlist', at: shelf.hifi, wall: 2, go: () => overlays.playlist() },
+  { n: '♪', id: 'hifi', title: 'Mini hi-fi', sub: 'La playlist', at: shelf.hifi, wall: 2, lean: HIFI_LEAN, go: () => overlays.playlist() },
   { n: 'Aa', id: 'shelf', title: 'Scaffali', sub: 'Avvicinati e leggi i titoli', wall: 2, lean: shelfView.lean, go: () => { shelfView.enter(shelfAsk.ri, shelfAsk.x); shelfAsk = { ri: 0, x: null }; },
     at: (() => { const R = shelf.shelf.rows[3]; return shelf.shelf.group.localToWorld(new THREE.Vector3(0.15, R.y + 0.12, shelf.shelf.spineZ)); })() },
-  { n: '⌂', id: 'door', title: 'La porta', sub: 'Titoli di coda', at: anchors.door, wall: 3, go: () => overlays.credits() },
+  { n: '⌂', id: 'door', title: 'La porta', sub: 'Titoli di coda', at: anchors.door, wall: 3, lean: DOOR_LEAN, go: () => overlays.credits() },
 ];
 const shelfHot = HOT.find((h) => h.id === 'shelf');
 let shelfAsk = { ri: 0, x: null }; // which shelf the close-up opens on: the top one, unless you tapped a book
@@ -186,21 +256,22 @@ function activate(h) {
   h.go?.();
 }
 function focus(h) {
-  rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(lookDir(rig.yaw, rig.pitch)), fov: camera.fov };
+  rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), ...rig.lens };
   rig.focus = h; rig.t = 0;
+  rig.peek.yaw = rig.peek.pitch = rig.peekS.yaw = rig.peekS.pitch = 0;
   document.body.classList.add('focused');
   $('#back').hidden = false;
-  view.leaning = ['typewriter', 'album', 'notebooks'].includes(h.id);
+  view.leaning = ['typewriter', 'album', 'notebooks', 'window'].includes(h.id);
 }
 function unfocus(quick) {
   if (!rig.focus) return;
   const h = rig.focus;
-  rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), fov: camera.fov, back: true };
+  rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), ...rig.lens, back: true };
   // recover yaw/pitch from the current gaze so the return is seamless
   const d = camera.getWorldDirection(new THREE.Vector3());
   rig.yaw = Math.atan2(-d.x, -d.z); rig.pitch = THREE.MathUtils.clamp(Math.asin(d.y), -0.43, 0.26);
   rig.targetYaw = nearestWall().yaw; rig.pitch = -0.15;
-  rig.focus = null; rig.t = quick ? 1 : 0;
+  rig.focus = null; rig.t = quick ? 1 : 0; rig.peeking = false;
   document.body.classList.remove('focused');
   $('#back').hidden = true; $('#help').hidden = true;
   view.leaning = false;
@@ -304,6 +375,11 @@ window.addEventListener('keydown', (e) => {
     if (/^[0-9]$/.test(e.key)) { sound.tvClick(); teletext.digit(e.key); refreshRemote(); return; }
     if (teletext.av && ['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key)) { teletext.tennis.input = e.key === 'ArrowUp' || e.key === 'w' ? -1 : 1; e.preventDefault(); return; }
   }
+  if (rig.focus?.peek && e.key.startsWith('Arrow')) {
+    e.preventDefault();
+    peekBy({ ArrowLeft: 0.12, ArrowRight: -0.12 }[e.key] ?? 0, { ArrowUp: 0.08, ArrowDown: -0.08 }[e.key] ?? 0);
+    return;
+  }
   if (rig.focus) return;
   if (e.key === 'ArrowLeft') turn(1);
   else if (e.key === 'ArrowRight') turn(-1);
@@ -318,6 +394,12 @@ window.addEventListener('keyup', (e) => { if (['ArrowUp', 'ArrowDown', 'w', 's']
 // --- shutter + LEGGIMI ------------------------------------------------------------------------
 let shutterTarget = 0.42, shutter = 0.42; // fraction of the window covered
 function toggleShutter() { shutterTarget = shutterTarget > 0.1 ? 0.04 : 0.42; sound.zzzt(); }
+// leaning out of the window: up goes the shutter (if it isn't already), and a hint for what you can do there
+function lookOut() {
+  if (shutterTarget > 0.1) toggleShutter();
+  $('#help').hidden = false;
+  $('#help').textContent = 'Trascina per guardarti intorno · tocca gli animali · Esc per tornare';
+}
 function layoutShutter() {
   const { slats, slatH } = anchors.shutter, top = 2.35, bottom = 0.88;
   const covered = (top - bottom) * shutter;
@@ -339,8 +421,24 @@ function resize() {
   renderer.setSize(innerWidth, innerHeight);
   const s = renderer.getDrawingBufferSize(new THREE.Vector2());
   post.setSize(s.x, s.y);
-  camera.aspect = innerWidth / innerHeight; setFov(); camera.updateProjectionMatrix();
+  setFov(); applyLens(rig.lens);
 }
+// The lens: a vertical field of view measured on the real screen, and the point (cx, cy) in screen
+// pixels where the line of sight lands. Off-centre, it becomes a view offset into a larger virtual frame
+// with the same focal length, so easing between close-ups and the free view never jumps.
+function applyLens({ fov, cx, cy }) {
+  const W = innerWidth, H = innerHeight;
+  const f = (H / 2) / Math.tan(THREE.MathUtils.degToRad(fov) / 2);
+  const Wf = 2 * Math.max(cx, W - cx), Hf = 2 * Math.max(cy, H - cy);
+  camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Hf / 2 / f));
+  camera.aspect = Wf / Hf;
+  if (Math.abs(Wf - W) < 0.5 && Math.abs(Hf - H) < 0.5) camera.clearViewOffset();
+  else camera.setViewOffset(Wf, Hf, Wf / 2 - cx, Hf / 2 - cy, W, H);
+  camera.updateProjectionMatrix();
+}
+const leanOf = (h) => { const l = typeof h.lean === 'function' ? h.lean() : h.lean; return { cx: innerWidth / 2, cy: innerHeight / 2, ...l }; };
+// how far down the page is still visible: the phone keyboard slides up over it
+const visibleBottom = () => { const v = window.visualViewport; return v ? Math.min(innerHeight, v.offsetTop + v.height) : innerHeight; };
 window.addEventListener('resize', resize);
 resize();
 
@@ -360,20 +458,25 @@ function frame(now) {
     if (Math.abs(d) < 0.001) { rig.yaw = rig.targetYaw; rig.targetYaw = null; }
   }
   shelfView.update(dt, camera);
+  const sk = Math.min(1, dt * 8);
+  rig.kbBottom += (visibleBottom() - rig.kbBottom) * sk;
+  rig.peekS.yaw += (rig.peek.yaw - rig.peekS.yaw) * sk; rig.peekS.pitch += (rig.peek.pitch - rig.peekS.pitch) * sk;
   const freePos = eyeAt(rig.yaw, eyePos), freeTarget = tmp.copy(freePos).add(lookDir(rig.yaw, rig.pitch));
   if (rig.focus || (rig.from && rig.t < 1)) {
     rig.t = Math.min(1, rig.t + dt / 0.6);
     const k = ease(rig.t);
-    const to = rig.focus ? rig.focus.lean : { pos: freePos, target: freeTarget.clone(), fov: rig.baseFov };
+    const to = rig.focus ? leanOf(rig.focus) : { pos: freePos, target: freeTarget.clone(), fov: rig.baseFov, cx: innerWidth / 2, cy: innerHeight / 2 };
     camera.position.lerpVectors(rig.from.pos, to.pos, k);
     const t = new THREE.Vector3().lerpVectors(rig.from.target, to.target, k);
-    camera.fov = THREE.MathUtils.lerp(rig.from.fov, to.fov, k);
+    const L = (a) => THREE.MathUtils.lerp(rig.from[a], to[a], k);
+    rig.lens = { fov: L('fov'), cx: L('cx'), cy: L('cy') };
     camera.lookAt(t);
     if (!rig.focus && rig.t >= 1) rig.from = null;
   } else {
-    camera.position.copy(freePos); camera.fov = rig.baseFov; camera.lookAt(freeTarget);
+    camera.position.copy(freePos); camera.lookAt(freeTarget);
+    rig.lens = { fov: rig.baseFov, cx: innerWidth / 2, cy: innerHeight / 2 };
   }
-  camera.updateProjectionMatrix();
+  applyLens(rig.lens);
   $('#wall-name').textContent = nearestWall().name;
 
   // window life runs only when you can see it
