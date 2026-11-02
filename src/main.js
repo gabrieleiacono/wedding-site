@@ -242,7 +242,7 @@ const HOT = [
   { n: 6, id: 'console', title: 'Console', sub: 'Passa su AV e gioca', at: tv.ps, wall: 1, lean: TV_LEAN, go: () => { teletext.setAV(true); showRemote(true); } },
   { n: 7, id: 'leggimi', title: 'Libreria', sub: 'Un libro brilla: LEGGIMI', at: leggimiAt, wall: 2,
     lean: LEGGIMI_LEAN, go: () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); } },
-  { n: 8, id: 'window', title: 'Finestra', sub: 'Alza la tapparella e affacciati', at: anchors.strap, wall: 0, lean: WINDOW_LEAN, peek: true, go: lookOut },
+  { n: 8, id: 'window', title: 'Finestra', sub: 'Alza la tapparella e affacciati', at: new THREE.Vector3(WINDOW.x1 - 0.3, 1.3, -ROOM.hz), wall: 0, lean: WINDOW_LEAN, peek: true, go: lookOut },
   { n: 9, id: 'calendar', title: 'Calendario', sub: 'Quanto manca?', at: anchors.calendar, wall: 3,
     lean: CAL_LEAN, go: () => overlays.calendar() },
   { n: '☎', id: 'phone', title: 'Telefono', sub: 'Domande frequenti', at: anchors.phone, wall: 3, lean: TV_LEAN, go: () => { teletext.go('700'); showRemote(true); } },
@@ -252,6 +252,7 @@ const HOT = [
   { n: '⌂', id: 'door', title: 'La porta', sub: 'Titoli di coda', at: anchors.door, wall: 3, lean: DOOR_LEAN, go: () => overlays.credits() },
 ];
 const shelfHot = HOT.find((h) => h.id === 'shelf');
+const windowGroup = anchors.shutter.shutter.parent;
 let shelfAsk = { ri: 0, x: null }; // which shelf the close-up opens on: the top one, unless you tapped a book
 function enterShelf(ri = 1, x = null) { shelfAsk = { ri, x }; activate(shelfHot); }
 shelfView.onLeggimi = () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); };
@@ -318,6 +319,17 @@ function clickAt(x, y) {
   if (bd > 40 && nearestWall() === WALLS[2]) {
     const hit = ray.intersectObjects(shelf.shelf.meshes, false)[0], rec = shelf.shelf.bookAt(hit);
     if (rec) { enterShelf(shelf.shelf.rows.findIndex((R) => R.row === rec.row), rec.pos.x); return; }
+  }
+  // a tap anywhere in the window opening (the view, the shutter, the glass) takes you to the window,
+  // unless something in the room is in the way
+  if (bd > 40) {
+    const p = ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 0, 1), ROOM.hz), new THREE.Vector3());
+    const inOpening = p && p.x > WINDOW.x0 && p.x < WINDOW.x1 && p.y > WINDOW.y0 && p.y < WINDOW.y1 && (!hitRoom || hitRoom.distance > p.distanceTo(ray.ray.origin) - 0.02);
+    let onFrame = false; // the open casements, the curtains, the shutter and its strap count too
+    for (let o = hitRoom?.object; o; o = o.parent) if (o === windowGroup) onFrame = true;
+    if (inOpening || onFrame) {
+      activate(HOT.find((h) => h.id === 'window')); return;
+    }
   }
   if (best) activate(best);
 }
