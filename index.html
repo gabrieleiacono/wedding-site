@@ -47,6 +47,14 @@
 <input id="typer" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Tastiera della macchina da scrivere">
 
 <div id="loading"><span>Sto disegnando la stanza…</span></div>
+<script>
+  // if the room can't be drawn, say so on the loading screen instead of waiting there for ever
+  (function () {
+    const say = (m) => { const l = document.querySelector('#loading span'); if (l && !document.querySelector('#loading.gone')) { l.style.cssText = 'font: 15px/1.5 "IBM Plex Mono", monospace; max-width: 34em; padding: 16px; text-align: center'; l.textContent = 'La stanza non si è caricata. ' + m; } };
+    addEventListener('error', (e) => { if (e.target && e.target !== window && e.target.tagName !== 'SCRIPT') return; say(String(e.message || e.target.src || 'errore')); }, true);
+    addEventListener('unhandledrejection', (e) => say(String((e.reason && e.reason.message) || e.reason)));
+  })();
+</script>
 <script type="module" src="src/main.js"></script>
 </body>
 </html>

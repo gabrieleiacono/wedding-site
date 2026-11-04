@@ -480,7 +480,13 @@ if (params.has('wall')) rig.yaw = WALLS[+params.get('wall')]?.yaw ?? 0;
 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 let last = performance.now();
 const tmp = new THREE.Vector3(), eyePos = new THREE.Vector3();
+// One bad frame (a glitch in one object) must never freeze the whole room: the next frame is
+// always asked for, and the error is reported once.
 function frame(now) {
+  requestAnimationFrame(frame);
+  try { drawFrame(now); } catch (e) { if (!frame.failed) { frame.failed = true; console.error('frame failed', e); } }
+}
+function drawFrame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   // free look: inertia + soft snap
   if (!rig.dragging && rig.targetYaw !== null) {
@@ -527,12 +533,11 @@ function frame(now) {
   shelf.leggimi.position.z = shelf.leggimiRest.z - bookOut * 0.14;
   shelf.leggimi.material.emissiveIntensity = 0.55 + Math.sin(now / 600) * 0.25;
   shelf.leggimiLight.intensity = 0.2 + Math.sin(now / 600) * 0.08;
-  if (Math.floor(now / 60000) !== frame.min) { frame.min = Math.floor(now / 60000); cal.draw(); }
+  if (Math.floor(now / 60000) !== drawFrame.min) { drawFrame.min = Math.floor(now / 60000); cal.draw(); }
 
   post.mat.uniforms.uTime.value = now / 1000;
   post.render(scene, camera);
   placeHotspots();
-  requestAnimationFrame(frame);
 }
 function placeHotspots() {
   const fwd = camera.getWorldDirection(new THREE.Vector3());
@@ -548,7 +553,7 @@ function placeHotspots() {
     if (on) { h.el.style.left = x + 'px'; h.el.style.top = y + 'px'; h.el.classList.toggle('flip', x > innerWidth - 300); }
   }
 }
-requestAnimationFrame((t) => { last = t; frame(t); setTimeout(() => $('#loading').classList.add('gone'), 200); });
+requestAnimationFrame((t) => { last = t; setTimeout(() => $('#loading').classList.add('gone'), 200); frame(t); });
 // ?cam=x,y,z,tx,ty,tz[,fov] parks the camera anywhere (for screenshots while modelling)
 if (params.has('cam')) {
   const v = params.get('cam').split(',').map(Number);
