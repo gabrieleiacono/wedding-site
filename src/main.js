@@ -23,7 +23,11 @@ await Promise.race([
 
 // --- renderer ------------------------------------------------------------------
 const canvas = $('#scene');
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: params.has('shot') });
+// Ask for the fast GPU first; some phones (or a browser that just lost its GPU) refuse that, so
+// fall back to whatever WebGL the browser will give.
+let renderer;
+try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: params.has('shot') }); }
+catch (e) { console.warn('WebGL (high-performance) refused, retrying', e); renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: params.has('shot') }); }
 renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;

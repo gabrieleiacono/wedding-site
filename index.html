@@ -48,11 +48,55 @@
 
 <div id="loading"><span>Sto disegnando la stanza…</span></div>
 <script>
-  // if the room can't be drawn, say so on the loading screen instead of waiting there for ever
+  // If the room can't be drawn, say so on the loading screen, in words a guest can act on, with a way
+  // through (try again, or the plain facts page) instead of waiting there for ever. The technical reason
+  // goes underneath in small type, for whoever is asked to fix it.
   (function () {
-    const say = (m) => { const l = document.querySelector('#loading span'); if (l && !document.querySelector('#loading.gone')) { l.style.cssText = 'font: 15px/1.5 "IBM Plex Mono", monospace; max-width: 34em; padding: 16px; text-align: center'; l.textContent = 'La stanza non si è caricata. ' + m; } };
-    addEventListener('error', (e) => { if (e.target && e.target !== window && e.target.tagName !== 'SCRIPT') return; say(String(e.message || e.target.src || 'errore')); }, true);
-    addEventListener('unhandledrejection', (e) => say(String((e.reason && e.reason.message) || e.reason)));
+    var failed = false;
+    var box = function (lead, advice, why) {
+      var l = document.getElementById('loading');
+      if (!l || l.classList.contains('gone')) return null;
+      l.innerHTML = '<div class="boot-msg" role="alert"><p class="lead"></p><p class="advice"></p>' +
+        '<p class="acts"><button type="button" class="pill btn" data-reload>Riprova</button> <a class="pill btn" href="facts.html">Solo i fatti</a></p><p class="why"></p></div>';
+      l.querySelector('.lead').textContent = lead;
+      l.querySelector('.advice').textContent = advice;
+      l.querySelector('.why').textContent = why || '';
+      l.querySelector('[data-reload]').onclick = function () { location.reload(); };
+      return l;
+    };
+    var fail = function (m) {
+      if (failed) return; failed = true;
+      var gl = /webgl|context/i.test(m);
+      box('La stanza non si è caricata.',
+        gl ? 'Questo browser in questo momento non riesce a disegnare in 3D. Chiudi del tutto il browser, riaprilo e riprova. Se non basta, prova con Chrome o Safari aggiornati.'
+           : 'Riprova tra un attimo. Se succede ancora, prova con un altro browser.', m);
+    };
+    addEventListener('error', function (e) {
+      if (e.target && e.target !== window && e.target.tagName !== 'SCRIPT') return;
+      fail(String(e.message || (e.target && e.target.src) || 'errore'));
+    }, true);
+    addEventListener('unhandledrejection', function (e) { fail(String((e.reason && e.reason.message) || e.reason)); });
+    // slow phones: after a while, offer the same ways out without giving up on the drawing
+    setTimeout(function () {
+      if (failed) return;
+      var l = document.getElementById('loading');
+      if (!l || l.classList.contains('gone')) return;
+      var n = document.createElement('div'); n.className = 'boot-msg slow';
+      n.innerHTML = '<p class="advice">Ci sta mettendo un po\'. Se resta ferma qui, riprova.</p><p class="acts"><button type="button" class="pill btn" data-reload>Riprova</button> <a class="pill btn" href="facts.html">Solo i fatti</a></p>';
+      n.querySelector('[data-reload]').onclick = function () { location.reload(); };
+      l.appendChild(n);
+    }, 25000);
+    // the graphics can also stop later (a phone short of memory): if they don't come back, say so
+    var c = document.getElementById('scene'), lost = null;
+    c.addEventListener('webglcontextlost', function () {
+      lost = setTimeout(function () {
+        var l = document.getElementById('loading'); if (!l) return;
+        l.classList.remove('gone');
+        failed = false;
+        fail('WebGL context lost');
+      }, 4000);
+    });
+    c.addEventListener('webglcontextrestored', function () { clearTimeout(lost); });
   })();
 </script>
 <script type="module" src="src/main.js"></script>
