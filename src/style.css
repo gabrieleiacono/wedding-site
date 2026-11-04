@@ -160,3 +160,12 @@ body.shelf #corner, body.shelf #hint { display: none; }
 #bookcard .bc-nav .btn { background: var(--hud-bg); color: var(--hud-fg); border-radius: 999px; padding: 0 16px; font: 13px 'IBM Plex Sans', sans-serif; }
 #bookcard .bc-nav [data-step] { width: 44px; justify-content: center; font-size: 20px; padding: 0; }
 @media (max-width: 700px) { #bookcard { padding: 16px 16px 12px; } #bookcard h2 { font-size: 21px; } #bookcard dl { font-size: 14px; } }
+
+/* the loading screen when the room can't be drawn (see the inline script in index.html) */
+#loading { flex-direction: column; gap: 18px; padding: 16px; text-align: center; }
+.boot-msg { max-width: 30em; font: 16px/1.5 'IBM Plex Sans', sans-serif; }
+.boot-msg p { margin: 0 0 12px; }
+.boot-msg .lead { font: 700 30px/1.2 'Caveat', cursive; }
+.boot-msg .acts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+.boot-msg .why { font: 12px/1.4 'IBM Plex Mono', monospace; color: #6A5A4A; overflow-wrap: anywhere; }
+.boot-msg.slow { font-size: 14px; }

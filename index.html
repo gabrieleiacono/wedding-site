@@ -64,8 +64,22 @@
       l.querySelector('[data-reload]').onclick = function () { location.reload(); };
       return l;
     };
-    var fail = function (m) {
+    // on the claude.ai preview, also note what went wrong in the page's database, so it can be fixed
+    // without anyone having to copy the message out by hand
+    var report = function (m, stack) {
+      try {
+        if (!window.claude || !window.claude.use) return;
+        window.claude.use('db').then(function (db) {
+          if (!db) return;
+          var gl2 = false; try { gl2 = !!document.createElement('canvas').getContext('webgl2'); } catch (e) {}
+          return db.collection('boot-errors').add({ at: new Date().toISOString(), message: String(m).slice(0, 500), stack: String(stack || '').slice(0, 2000),
+            ua: navigator.userAgent, screen: innerWidth + 'x' + innerHeight + '@' + (window.devicePixelRatio || 1), webgl2: gl2 });
+        }).catch(function () {});
+      } catch (e) {}
+    };
+    var fail = function (m, stack) {
       if (failed) return; failed = true;
+      report(m, stack);
       var gl = /webgl|context/i.test(m);
       box('La stanza non si è caricata.',
         gl ? 'Questo browser in questo momento non riesce a disegnare in 3D. Chiudi del tutto il browser, riaprilo e riprova. Se non basta, prova con Chrome o Safari aggiornati.'
@@ -73,9 +87,9 @@
     };
     addEventListener('error', function (e) {
       if (e.target && e.target !== window && e.target.tagName !== 'SCRIPT') return;
-      fail(String(e.message || (e.target && e.target.src) || 'errore'));
+      fail(String(e.message || (e.target && e.target.src) || 'errore'), e.error && e.error.stack);
     }, true);
-    addEventListener('unhandledrejection', function (e) { fail(String((e.reason && e.reason.message) || e.reason)); });
+    addEventListener('unhandledrejection', function (e) { fail(String((e.reason && e.reason.message) || e.reason), e.reason && e.reason.stack); });
     // slow phones: after a while, offer the same ways out without giving up on the drawing
     setTimeout(function () {
       if (failed) return;
