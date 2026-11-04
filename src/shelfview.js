@@ -2,7 +2,7 @@
 // shelf, jump to an author, pinch or wheel to zoom) and "Tira fuori il libro" (tap a book: it slides
 // out, turns so its spine reads left to right, and a library card tells you what it is).
 // Only taps and drags, no hover.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { BOOK_NOTES } from './content.js';
 
 const FOV = 34;

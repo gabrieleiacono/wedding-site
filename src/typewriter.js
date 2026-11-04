@@ -1,7 +1,7 @@
 // The electronic typewriter (design F1 #1, F8): the RSVP.
 // A one-line LCD asks the questions; your real keyboard (or the phone keyboard) drives the keys,
 // each answer types onto the sheet, Return goes to the next question, and the sheet rolls out at the end.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk, makeScreen } from './ink.js';
 import { buildTypewriterModel } from './typewriter-model.js';
 

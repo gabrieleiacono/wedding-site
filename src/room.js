@@ -1,6 +1,6 @@
 // The study (design F2): 4.2 × 3.6 m, ceiling 2.9 m. x = east, -z = north, y = up.
 // Wall A (north): desk + window · B (east): TV · C (south): bookshelf · D (west): door, phone, calendar.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { STORIES } from './content.js';
 import { buildSirio } from './phone.js';

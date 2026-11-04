@@ -2,7 +2,7 @@
 //  - makeInk(): a Lambert material whose lit result is redrawn as watercolour wash + cross-hatching
 //    in 6 levels, fixed to world space so the hatching never swims. Optional wood grain / parquet.
 //  - InkPost: outline pass (depth + normal edges, slightly wobbly) and paper grain over the frame.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 
 export const INK = new THREE.Color('#1A1714');
 export const PAPER = new THREE.Color('#F7EEDC');

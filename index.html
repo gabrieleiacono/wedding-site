@@ -8,7 +8,6 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600..800&family=Caveat:wght@500;700&family=Courier+Prime&family=IBM+Plex+Mono:wght@400;500;700&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="src/style.css">
-<script type="importmap">{ "imports": { "three": "./vendor/three.module.min.js" } }</script>
 </head>
 <body>
 <canvas id="scene" aria-label="Uno studio italiano degli anni '90 al tramonto, disegnato a penna. Trascina per girarti."></canvas>
@@ -77,9 +76,17 @@
         }).catch(function () {});
       } catch (e) {}
     };
+    var reports = 0, vague = true;
     var fail = function (m, stack) {
-      if (failed) return; failed = true;
-      report(m, stack);
+      // a later error can say more than the first one (a script element's error event carries no text)
+      if (failed) {
+        if (!vague || !m || m === 'errore') return;
+        vague = false; if (reports++ < 3) report(m, stack);
+        var w = document.querySelector('#loading .why'); if (w) w.textContent = m;
+        return;
+      }
+      failed = true; vague = !m || m === 'errore' || /^script /.test(m);
+      if (reports++ < 3) report(m, stack);
       var gl = /webgl|context/i.test(m);
       box('La stanza non si è caricata.',
         gl ? 'Questo browser in questo momento non riesce a disegnare in 3D. Chiudi del tutto il browser, riaprilo e riprova. Se non basta, prova con Chrome o Safari aggiornati.'
@@ -87,7 +94,8 @@
     };
     addEventListener('error', function (e) {
       if (e.target && e.target !== window && e.target.tagName !== 'SCRIPT') return;
-      fail(String(e.message || (e.target && e.target.src) || 'errore'), e.error && e.error.stack);
+      var t = e.target && e.target !== window ? e.target : null;
+      fail(String(e.message || (t ? 'script ' + (t.src || t.type || 'inline') + ' non caricato' : 'errore')), e.error && e.error.stack);
     }, true);
     addEventListener('unhandledrejection', function (e) { fail(String((e.reason && e.reason.message) || e.reason), e.reason && e.reason.stack); });
     // slow phones: after a while, offer the same ways out without giving up on the drawing

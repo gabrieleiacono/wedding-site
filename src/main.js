@@ -1,5 +1,5 @@
 // Lo Scrittoio con Vista — boot, lights, camera rig, hotspots and the frame loop.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { InkPost, makeScreen } from './ink.js';
 import { buildRoom, EYE, ROOM, WINDOW } from './room.js';
 import { buildTV } from './tv.js';

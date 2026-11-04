@@ -1,7 +1,7 @@
 // Book spines drawn in canvas: one atlas holds every book on the shelf (spine, page block, cover
 // colour), drawn in millimetres from the research data in books-data.js. Typography, publisher
 // logos, series furniture and wear (reading creases, sun fade, rubbed edges) are all procedural.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 
 export function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }

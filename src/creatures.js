@@ -2,7 +2,7 @@
 // and swallows on the telegraph wire that swoop past the window now and then.
 // Each animal is an articulated model (pivots for neck, head, ears, legs and tail) built from
 // simple solids, shaded by the same pen material as everything else.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { EYE } from './room.js';
 import { makeInk } from './ink.js';
 import { rng, merge, limb, lumpy } from './geo.js';

@@ -1,6 +1,6 @@
 // Televideo-style teletext engine (design F7): a 40×25 character grid drawn on a canvas,
 // pages as data, three-digit page entry, fastext colours, rotating subpages and a live clock.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { WEDDING, PROGRAMME, TRAVEL, STAY, DRESS, FAQ } from './content.js';
 import { Tennis } from './tennis.js';
 

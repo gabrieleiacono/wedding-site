@@ -1,6 +1,6 @@
 // Close-ups that open on top of the room: album, notebooks, the LEGGIMI book, the RSVP reply card,
 // the wall calendar, the hi-fi playlist and the closing credits behind the door.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { PHOTOS, STORIES, LEGGIMI, CREDITS, PLAYLIST, WEDDING } from './content.js';
 
 const $ = (s) => document.querySelector(s);

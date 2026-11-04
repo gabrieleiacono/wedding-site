@@ -2,7 +2,7 @@
 // editions (spines drawn by spines.js from books-data.js), the mini hi-fi, a tennis trophy, a globe,
 // and one glowing book, LEGGIMI, that pulls out. Some shelf space is kept free for records, CDs and
 // tapes (anchors.reserved), to be filled later.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { M, box, cyl, ROOM } from './room.js';
 import { BOOKS } from './books-data.js';

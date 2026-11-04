@@ -4,7 +4,7 @@
 // trains cross, far hills with a hill town, and a sky that slowly goes from golden hour to blue hour.
 // Distances: `d` is metres north of the eye, x is metres east. Everything outside sits on layer 0
 // (so it gets outlines), except the sky, clouds, smoke and far wires, which are on layer 1.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { EYE } from './room.js';
 import { makeInk, INK } from './ink.js';
 import { rng, hash2, vnoise, fbm, sm, lerp, merge, lumpy, limb } from './geo.js';

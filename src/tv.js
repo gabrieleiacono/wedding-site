@@ -1,6 +1,6 @@
 // Wall B (east): 32" flat-glass CRT on a black cabinet, VCR blinking 12:00, the grey console,
 // VHS tapes, a film poster and a wall clock (design F4).
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk, makeScreen } from './ink.js';
 import { M, box, cyl, slab, ROOM, roundedShape, extrude } from './room.js';
 import { merge } from './geo.js';

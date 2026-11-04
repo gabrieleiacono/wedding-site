@@ -1,7 +1,7 @@
 // A detailed electronic typewriter modelled on the late-80s/90s Smith Corona memory typewriters
 // (two-tone housing, sculpted cream keycaps with black and red legends, one-line LCD, paper slot with
 // a ruler, platen knob on the right). Badge and model name are generic on purpose (design note F-notes).
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { M, box, cyl, slab, profile } from './room.js';
 

@@ -1,6 +1,6 @@
 // The SIP "Sirio"-style desk phone: soft cream wedge body, grey-blue keypad panel with twelve
 // black keys and two memory buttons, the handset resting along the back, and a coiled black cord.
-import * as THREE from 'three';
+import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { slab, roundedShape, extrude } from './room.js';
 
