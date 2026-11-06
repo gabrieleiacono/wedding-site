@@ -2,7 +2,8 @@
 // Pro Line, cro-mo steel, in neon yellow with black paint splatter. Drawn from photos of real 2100s
 // (sale listings and a video): WHEELER in black with a red shadow down the down tube, 2100 up the
 // seat tube, "Pro Line" in script on the top tube, rigid black fork, cantilever brakes, triple
-// chainset, black mudguards and rear rack, and the rear-mounted kickstand it stands on.
+// chainset and the rear-mounted kickstand it stands on. The real ones came with black mudguards
+// and a rear rack; this one has had them taken off, as a mountain bike.
 //
 // Built in the bike's own frame (x forward, y up, z to the right, the chain side; y = 0 is the floor)
 // and merged into three draws: the frame (one texture with splatter and decals), every other part
@@ -183,7 +184,7 @@ function label(text, kind) {
 export function buildBike(room) {
   const parts = []; // [geometry, colour] for the one vertex-coloured mesh
   const lines = []; // spoke end points
-  // the front end (fork, front wheel, mudguard, brake, stem, bars) is turned about the steering axis
+  // the front end (fork, front wheel, brake, stem, bars) is turned about the steering axis
   const steerM = new THREE.Matrix4().makeTranslation(CROWN.x, CROWN.y, 0)
     .multiply(new THREE.Matrix4().makeRotationAxis(AX, STEER))
     .multiply(new THREE.Matrix4().makeTranslation(-CROWN.x, -CROWN.y, 0));
@@ -315,50 +316,6 @@ export function buildBike(room) {
   front = true; const f0 = lines.length; wheel(F, false);
   for (let i = f0; i < lines.length; i++) lines[i].applyMatrix4(steerM);
   front = false; wheel(R, true);
-
-  // mudguards: black plastic, a shallow C in section, on wire stays
-  const guard = (c, a0, a1, w, rout) => {
-    const sec = [[-w / 2, -0.004], [-w * 0.38, 0.006], [0, 0.009], [w * 0.38, 0.006], [w / 2, -0.004], [w * 0.36, 0.0], [0, 0.003], [-w * 0.36, 0.0]];
-    const n = 48, pos = [], idx = [];
-    for (let i = 0; i <= n; i++) {
-      const a = a0 + (a1 - a0) * (i / n), ca = Math.cos(a), sa = Math.sin(a);
-      for (const [z, dr] of sec) pos.push(c.x + ca * (rout + dr), c.y + sa * (rout + dr), z);
-    }
-    const m = sec.length;
-    for (let i = 0; i < n; i++) for (let j = 0; j < m; j++) {
-      const a = i * m + j, b = i * m + (j + 1) % m, c2 = a + m, d = b + m;
-      idx.push(a, c2, b, b, c2, d);
-    }
-    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx);
-    // close the two ends so it reads as a solid strip
-    const cap = (i, flip) => { const base = i * m; for (let j = 1; j < m - 1; j++) flip ? idx.push(base, base + j + 1, base + j) : idx.push(base, base + j, base + j + 1); };
-    cap(0, false); cap(n, true); g.setIndex(idx);
-    g.computeVertexNormals();
-    add(g, C.black);
-    // the stays, either side, from the guard to the axle
-    for (const k of [0.25, 0.55]) {
-      const a = a0 + (a1 - a0) * k;
-      for (const z of [-1, 1]) add(rod(V(c.x + Math.cos(a) * (rout - 0.002), c.y + Math.sin(a) * (rout - 0.002), z * (w / 2 - 0.004)), V(c.x + Math.cos(a) * 0.012, c.y + Math.sin(a) * 0.012, z * 0.056), 0.0018, 0.0018, 5), C.silver);
-    }
-  };
-  front = true; guard(F, deg(20), deg(196), 0.062, 0.352); front = false;
-  guard(R, deg(68), deg(206), 0.062, 0.352);
-  add(boxAt(0.004, 0.05, 0.06, R.x + Math.cos(deg(206)) * 0.352, R.y + Math.sin(deg(206)) * 0.352 - 0.022, 0, deg(-30)), C.black); // mud flap
-
-  // rear rack: a black tube platform above the wheel, legs to the dropout eyelets, struts to the stays
-  {
-    const y = 0.715, x0 = 0.06, x1 = -0.27, w = 0.068;
-    const rail = (z) => [V(x0, y - 0.006, z), V(x1 + 0.02, y, z)];
-    for (const z of [-w, w]) {
-      add(pipe([V(x0, y - 0.004, z), V(x1, y, z), V(x1 - 0.012, y - 0.03, z), V(-0.035, R.y + 0.03, z * 0.97), V(-0.012, R.y + 0.004, 0.07 * Math.sign(z))], 0.0045, 30, 6), C.black);
-      add(rod(V(-0.11, y - 0.004, z), V(-0.02, R.y + 0.012, 0.07 * Math.sign(z)), 0.0042, 0.0042, 6), C.black);
-      add(rod(V(x0, y - 0.004, z), V(SS0.x - 0.05, SS0.y - 0.08, 0.03 * Math.sign(z)), 0.002, 0.002, 4), C.black);
-    }
-    for (const z of [-0.03, 0, 0.03]) add(rod(...rail(z), 0.0035, 0.0035, 6), C.black);
-    for (const xx of [x0, -0.05, -0.16, x1 + 0.01]) add(rod(V(xx, y - 0.004, -w), V(xx, y - 0.004, w), 0.0035, 0.0035, 6), C.black);
-    add(boxAt(0.012, 0.036, 0.08, x1 - 0.01, y - 0.04, 0, deg(10)), C.red); // rear reflector
-    add(boxAt(0.016, 0.046, 0.09, x1 - 0.002, y - 0.04, 0, deg(10)), C.black);
-  }
 
   // drivetrain: three chainrings behind a black guard ring, cranks, pedals, freewheel, derailleurs, chain
   add(toothedRing(48, 0.07, 0.003, BB.x, BB.y, 0.062), C.silver);
