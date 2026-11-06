@@ -190,7 +190,7 @@ export class Typewriter {
   drawLCD(now) {
     const c = this.lcdCanvas.getContext('2d');
     const flash = this.flash && now - this.flash < 400;
-    c.fillStyle = flash ? '#C9D9B8' : '#9AB094'; c.fillRect(0, 0, 1024, 176);
+    c.fillStyle = flash ? '#CCDBB4' : '#A6B793'; c.fillRect(0, 0, 1024, 176);
     c.fillStyle = 'rgba(31,42,30,0.08)';
     for (let i = 0; i < 26; i++) c.fillRect(10 + i * 38.8, 40, 35, 96);
     c.fillStyle = '#1F2A1E'; c.font = '700 64px "IBM Plex Mono", monospace'; c.textBaseline = 'middle';
