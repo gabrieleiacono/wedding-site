@@ -31,8 +31,13 @@ const TYRE = { r: 0.305, t: 0.027 }, RIM = 0.2795;
 const CRANK = 0.17, CRANK_ANGLE = deg(-35);
 const STEER = 0.3, LEAN = deg(8), YAW = deg(4);
 const CHAIN_PITCH = 0.0127, MID_TEETH = 38;
-// the flick of the pedals when you tap the bike: one turn back, fast then slowing, `dur` seconds
-const SPIN = { turns: 1, dur: 1.7, power: 2.4, ratio: 2, ratchet: 24 };
+// Tapping the bike pushes the pedals back: from rest one tap carries them one turn (SPIN.turns) before
+// friction (DRAG: dw/dt = -k w - c) stops them; taps add up to SPIN.maxPushes pushes of speed. The
+// freewheel's sprocket turns `ratio` times for each turn of the cranks and clicks `ratchet` times a turn.
+// Taps faster than SPAM (more than `rate` a second, averaged over `window` seconds) throw the chain off.
+const SPIN = { turns: 1, ratio: 2, ratchet: 24, maxPushes: 3.2 };
+const DRAG = { k: 1.5, c: 1.8 };
+const SPAM = { rate: 5, window: 1.5 };
 
 const C = {
   yellow: '#DCEB2A', black: '#242327', rubber: '#1D1C1F', dark: '#3A393E', silver: '#C3C5C6',
@@ -464,40 +469,174 @@ export function buildBike(room) {
     const g = new THREE.Group(); g.position.set(pedalPivot[i].x - BB.x, pedalPivot[i].y - BB.y, 0);
     g.add(around(list, pedalPivot[i].x, pedalPivot[i].y)); crank.add(g); return g;
   });
-  // the chain: a tube with a pattern of alternating inner and outer links that runs along it
+  // The chain: a tube with a pattern of alternating inner and outer links that runs along it. It is
+  // built from points (not a TubeGeometry) so that, when it falls off, those points can be let go and
+  // hang and drop as a rope (see fall()).
   const chainCurve = new THREE.CatmullRomCurve3(chainPts, true, 'centripetal');
+  const chainLen = chainCurve.getLength(), CN = 128, CS = 6, CR = 0.0038, seg = chainLen / CN;
   const chainTex = (() => {
     const c = document.createElement('canvas'); c.width = 64; c.height = 8;
     const x = c.getContext('2d'); x.fillStyle = '#35353A'; x.fillRect(0, 0, 32, 8); x.fillStyle = '#9A9A9E'; x.fillRect(32, 0, 32, 8);
     const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.anisotropy = 4;
-    t.repeat.set(Math.round(chainCurve.getLength() / (2 * CHAIN_PITCH)), 1); // one tile = an inner and an outer link
+    t.repeat.set(Math.round(chainLen / (2 * CHAIN_PITCH)), 1); // one tile = an inner and an outer link
     return t;
   })();
-  const chain = new THREE.Mesh(new THREE.TubeGeometry(chainCurve, 160, 0.0038, 4, true), makeInk({ color: '#ffffff', map: chainTex, wash: 0.8 }));
+  const chainRest = new Float32Array(CN * 3), chainP = new Float32Array(CN * 3);
+  for (let i = 0; i < CN; i++) chainCurve.getPointAt(i / CN).toArray(chainRest, i * 3);
+  chainP.set(chainRest);
+  const chainGeo = new THREE.BufferGeometry(), RING = CS + 1, VERTS = (CN + 1) * RING;
+  chainGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(VERTS * 3), 3));
+  chainGeo.setAttribute('normal', new THREE.BufferAttribute(new Float32Array(VERTS * 3), 3));
+  {
+    const uv = new Float32Array(VERTS * 2), idx = [];
+    for (let i = 0; i <= CN; i++) for (let j = 0; j <= CS; j++) { uv[(i * RING + j) * 2] = i / CN; uv[(i * RING + j) * 2 + 1] = j / CS; }
+    for (let i = 0; i < CN; i++) for (let j = 0; j < CS; j++) { const a = i * RING + j, b = a + RING; idx.push(a, b, a + 1, b, b + 1, a + 1); }
+    chainGeo.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); chainGeo.setIndex(idx);
+  }
+  const tT = new THREE.Vector3(), tN = new THREE.Vector3(), tB = new THREE.Vector3(), Zr = new THREE.Vector3(0, 0, 1), Yr = new THREE.Vector3(0, 1, 0);
+  /** Lay the tube along the points in chainP: a ring of vertices round each, facing along the chain. */
+  function writeChain() {
+    const pos = chainGeo.attributes.position, nor = chainGeo.attributes.normal;
+    for (let i = 0; i <= CN; i++) {
+      const k = i % CN, a = ((k + CN - 1) % CN) * 3, b = ((k + 1) % CN) * 3;
+      tT.set(chainP[b] - chainP[a], chainP[b + 1] - chainP[a + 1], chainP[b + 2] - chainP[a + 2]).normalize();
+      tN.crossVectors(tT, Math.abs(tT.z) > 0.9 ? Yr : Zr).normalize(); tB.crossVectors(tT, tN);
+      for (let j = 0; j <= CS; j++) {
+        const th = (j / CS) * Math.PI * 2, c = Math.cos(th), sn = Math.sin(th), o = (i * RING + j) * 3;
+        const nx = tN.x * c + tB.x * sn, ny = tN.y * c + tB.y * sn, nz = tN.z * c + tB.z * sn;
+        nor.array[o] = nx; nor.array[o + 1] = ny; nor.array[o + 2] = nz;
+        pos.array[o] = chainP[k * 3] + nx * CR; pos.array[o + 1] = chainP[k * 3 + 1] + ny * CR; pos.array[o + 2] = chainP[k * 3 + 2] + nz * CR;
+      }
+    }
+    pos.needsUpdate = nor.needsUpdate = true; chainGeo.computeBoundingSphere();
+  }
+  writeChain();
+  const chain = new THREE.Mesh(chainGeo, makeInk({ color: '#ffffff', map: chainTex, wash: 0.8 }));
   chain.castShadow = true; chain.receiveShadow = true; bike.add(chain);
 
+  // --- the pedals as a flywheel ------------------------------------------------------------------
   // Pedalling backwards: the cranks turn counter-clockwise seen from the chain side, the pedals stay
   // level, and the chain follows the middle ring (38 teeth = 19 tiles a turn) while the rear wheel
-  // stays put: the freewheel lets the sprocket run on its own, clicking.
+  // stays put: the freewheel lets the sprocket run on its own, clicking, once per ratchet tooth.
+  // A tap gives the crank a push (its speed goes up by PUSH); friction takes it down again, a drag
+  // proportional to the speed plus a steady rubbing, which brings it to rest in finite time.
   const crankTo = (a) => {
     crank.rotation.z = a;
     for (const g of pedals) g.rotation.z = -a;
-    chainTex.offset.x = -a * (MID_TEETH / 2 / (2 * Math.PI));
+    chainTex.offset.x = -a * (MID_TEETH / 2 / (2 * Math.PI)); // whole tiles a turn: no jump when a wraps
   };
-  let t0 = null;
-  /** Flick the pedals back one turn. Returns when each ratchet click falls (seconds from now), or null if already turning. */
-  function spin() {
-    if (t0 !== null) return null;
-    t0 = performance.now();
-    // the sprocket turns SPIN.ratio times for each turn of the cranks and clicks SPIN.ratchet times a turn
-    const n = Math.round(SPIN.turns * SPIN.ratio * SPIN.ratchet);
-    return Array.from({ length: n }, (_, k) => SPIN.dur * (1 - Math.pow(1 - (k + 1) / n, 1 / SPIN.power)));
+  const TAU = Math.PI * 2;
+  const travel = (w) => { const ts = Math.log(1 + DRAG.k * w / DRAG.c) / DRAG.k; return (w + DRAG.c / DRAG.k) * (1 - Math.exp(-DRAG.k * ts)) / DRAG.k - DRAG.c / DRAG.k * ts; };
+  // the push is the speed that carries a crank at rest exactly one turn before friction stops it
+  let lo = 0, hi = 100; for (let n = 0; n < 40; n++) { const m = (lo + hi) / 2; if (travel(m) < TAU * SPIN.turns) lo = m; else hi = m; }
+  const PUSH = (lo + hi) / 2, OMEGA_MAX = PUSH * SPIN.maxPushes;
+  let omega = 0, angle = 0, ratchetPos = 0, last = null;
+  let broken = false, chainState = 'on'; // 'on', then 'falling', then 'down'
+  const taps = [];
+  const hooks = {}; // the sounds: click(delay, strength), whirr(level), snap(), clink(delay, strength)
+
+  /** A tap on the bike. Another push on the crank, unless the taps come faster than SPAM allows: then the chain comes off. */
+  function tap(now = performance.now()) {
+    if (broken) return 'nothing';
+    while (taps.length && now - taps[0] > SPAM.window * 1000) taps.shift();
+    taps.push(now);
+    if (taps.length / SPAM.window > SPAM.rate) { fall(); return 'fall'; }
+    omega = Math.min(OMEGA_MAX, omega + PUSH);
+    return 'push';
   }
+
+  // --- the chain coming off ----------------------------------------------------------------------
+  // The part of the chain wrapped round the rear sprocket and the derailleur's two wheels stays where
+  // it is; the rest (the top run, the ring, the bottom run) is let go and becomes a rope, pulled down
+  // by gravity (in the bike's own frame, which leans), dropping onto the floor beside the pedals.
+  const pinned = new Uint8Array(CN), zMin = new Float32Array(CN);
+  for (let i = 0; i < CN; i++) {
+    const x = chainRest[i * 3], y = chainRest[i * 3 + 1];
+    pinned[i] = Math.hypot(x - R.x, y - R.y) < 0.062 || Math.hypot(x - J1.x, y - J1.y) < 0.045 || Math.hypot(x - J2.x, y - J2.y) < 0.045 ? 1 : 0;
+    zMin[i] = 0.075 + 0.06 * (0.5 + 0.5 * Math.sin(i * 0.43)); // stays on the chain side of the frame; the lie of the chain meanders sideways
+  }
+  const PULL = 5; // m/s^2: the derailleur's spring takes up the slack, drawing the loose chain rearwards, into a heap
+  const G = V(0, -Math.cos(LEAN), -Math.sin(LEAN)).multiplyScalar(9.81), UPN = V(0, Math.cos(LEAN), Math.sin(LEAN));
+  const chainV = new Float32Array(CN * 3), chainOld = new Float32Array(CN * 3);
+  let calm = 0, fallT = 0, lastClink = -1, fastestNow = 0;
+  function fall() {
+    broken = true; chainState = 'falling';
+    const rnd = rng(2100), speed = Math.min(0.5, omega * 0.077 * 0.12); // it is flung a little along its run as it comes off
+    for (let i = 0; i < CN; i++) {
+      if (pinned[i]) continue;
+      const a = ((i + CN - 1) % CN) * 3, b = ((i + 1) % CN) * 3, o = i * 3;
+      tT.set(chainRest[b] - chainRest[a], chainRest[b + 1] - chainRest[a + 1], chainRest[b + 2] - chainRest[a + 2]).normalize();
+      chainV[o] = tT.x * speed + (rnd() - 0.5) * 0.6; chainV[o + 1] = tT.y * speed + (rnd() - 0.5) * 0.6 - 0.5; chainV[o + 2] = 0.2 + rnd() * 0.4;
+    }
+    hooks.snap?.(); hooks.whirr?.(0);
+  }
+  /** Advance the falling chain by dt seconds. */
+  function simulate(dt) {
+    const H = 1 / 240, steps = Math.max(1, Math.round(dt / H)), h = dt / steps;
+    for (let st = 0; st < steps; st++) {
+      let fastest = 0;
+      for (let i = 0; i < CN; i++) {
+        if (pinned[i]) continue;
+        const o = i * 3;
+        for (let k = 0; k < 3; k++) { chainOld[o + k] = chainP[o + k]; chainV[o + k] = (chainV[o + k] + (G.getComponent(k) + (k === 0 && fallT < 0.7 ? -PULL : 0)) * h) * (fallT < 1.5 ? 0.9995 : 0.985); chainP[o + k] += chainV[o + k] * h; }
+      }
+      for (let it = 0; it < 14; it++) {
+        for (let i = 0; i < CN; i++) {
+          const j = (i + 1) % CN, wi = pinned[i] ? 0 : 1, wj = pinned[j] ? 0 : 1;
+          if (!wi && !wj) continue;
+          const a = i * 3, b = j * 3, dx = chainP[b] - chainP[a], dy = chainP[b + 1] - chainP[a + 1], dz = chainP[b + 2] - chainP[a + 2];
+          const d = Math.hypot(dx, dy, dz) || 1e-9;
+          if (d <= seg) continue; // a slack chain does not push: it can crumple and heap up
+          const k = (d - seg) / d / (wi + wj);
+          chainP[a] += dx * k * wi; chainP[a + 1] += dy * k * wi; chainP[a + 2] += dz * k * wi;
+          chainP[b] -= dx * k * wj; chainP[b + 1] -= dy * k * wj; chainP[b + 2] -= dz * k * wj;
+        }
+        for (let i = 0; i < CN; i++) {
+          if (pinned[i]) continue;
+          const o = i * 3, below = UPN.x * chainP[o] + UPN.y * chainP[o + 1] + UPN.z * chainP[o + 2] - 0.0045;
+          if (below < 0) { chainP[o] -= UPN.x * below; chainP[o + 1] -= UPN.y * below; chainP[o + 2] -= UPN.z * below; }
+          if (chainP[o + 2] < zMin[i]) { // stays on the chain side of the frame; near a pinned end it may come closer
+            let near = 99; for (let q = 1; q < 8 && near === 99; q++) if (pinned[(i + q) % CN] || pinned[(i - q + CN) % CN]) near = q;
+            const lim = near === 99 ? zMin[i] : 0.05 + (zMin[i] - 0.05) * (near / 8);
+            if (chainP[o + 2] < lim) chainP[o + 2] = lim;
+          }
+        }
+      }
+      for (let i = 0; i < CN; i++) {
+        if (pinned[i]) continue;
+        const o = i * 3;
+        for (let k = 0; k < 3; k++) chainV[o + k] = (chainP[o + k] - chainOld[o + k]) / h;
+        const vn = UPN.x * chainV[o] + UPN.y * chainV[o + 1] + UPN.z * chainV[o + 2], onFloor = UPN.x * chainP[o] + UPN.y * chainP[o + 1] + UPN.z * chainP[o + 2] - 0.0045 < 2e-4;
+        if (onFloor) {
+          if (vn < -0.5 && fallT - lastClink > 0.03) { lastClink = fallT; hooks.clink?.(Math.min(dt, st * h), Math.min(1, -vn / 3)); }
+          const keep = vn < 0 ? -vn * 0.2 : vn; // a little bounce, then it lies
+          for (let k = 0; k < 3; k++) chainV[o + k] = (chainV[o + k] - UPN.getComponent(k) * vn) * 0.96 + UPN.getComponent(k) * keep;
+        }
+        fastest = Math.max(fastest, Math.hypot(chainV[o], chainV[o + 1], chainV[o + 2]));
+      }
+      fallT += h; calm = fastest < 0.08 ? calm + h : 0; fastestNow = fastest;
+    }
+    writeChain();
+    if (calm > 0.4 || fallT > 8) chainState = 'down'; // it has stopped: nothing more to move
+  }
+
   function tick(now) {
-    if (t0 === null) return;
-    const u = Math.min(1, Math.max(0, (now - t0) / 1000 / SPIN.dur));
-    crankTo(Math.PI * 2 * SPIN.turns * (1 - Math.pow(1 - u, SPIN.power))); // quick off the mark, then friction slows it
-    if (u >= 1) { crankTo(0); t0 = null; } // a whole turn is back where it began
+    const dt = last === null ? 0 : Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+    if (omega > 0 && dt > 0) {
+      const w0 = omega, e = Math.exp(-DRAG.k * dt), w1 = (w0 + DRAG.c / DRAG.k) * e - DRAG.c / DRAG.k;
+      let dA;
+      if (w1 > 0) { dA = (w0 + DRAG.c / DRAG.k) * (1 - e) / DRAG.k - DRAG.c / DRAG.k * dt; omega = w1; }
+      else { dA = travel(w0); omega = 0; } // it stops within this step
+      angle = (angle + dA) % TAU; crankTo(angle);
+      if (!broken) {
+        // one click each time the freewheel's sprocket (turning `ratio` times as fast as the cranks) passes a ratchet tooth
+        const r0 = ratchetPos, r1 = r0 + dA * SPIN.ratio * SPIN.ratchet / TAU, loud = 0.45 + 0.55 * Math.min(1, w0 / OMEGA_MAX);
+        for (let c = Math.floor(r0) + 1; c <= Math.floor(r1); c++) hooks.click?.((c - r0) / (r1 - r0) * dt, loud);
+        ratchetPos = r1;
+        hooks.whirr?.(omega / OMEGA_MAX);
+      }
+    }
+    if (chainState === 'falling') simulate(dt);
   }
   // a generous invisible target round the cranks: a tap near the pedals counts (it is never drawn)
   const target = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 6), new THREE.MeshBasicMaterial({ visible: false }));
@@ -510,7 +649,7 @@ export function buildBike(room) {
   outer.rotation.y = -Math.PI / 2 + YAW; // bike forward = world +z (south), chain side = world -x (into the room)
   bike.rotation.x = -LEAN;
   outer.position.set(ROOM.hx - 0.545, 0, 0.4);
-  return { group: outer, spin, tick, isBike, crankTo, angle: () => crank.rotation.z };
+  return { group: outer, hooks, tap, tick, isBike, crankTo, state: () => ({ omega, angle, broken, chain: chainState, push: PUSH, max: OMEGA_MAX, chainSpeed: fastestNow, fallT }) };
 }
 
 /** Merge non-indexed geometries keeping position, normal and uv. */

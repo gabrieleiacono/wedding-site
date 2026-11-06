@@ -59,6 +59,7 @@ const teletext = new Teletext(store);
 const tv = buildTV(room, teletext);
 const shelf = buildBookshelf(room);
 const bike = buildBike(room);
+Object.assign(bike.hooks, { click: (d, v) => sound.ratchet(d, v), whirr: (v) => sound.whirr(v), snap: () => sound.snap(), clink: (d, v) => sound.clink(d, v) });
 const shelfView = new ShelfView({ shelf: shelf.shelf, leggimi: shelf.leggimi, sound });
 const typewriter = new Typewriter(room, sound);
 const view = new Countryside(scene, sound);
@@ -379,8 +380,8 @@ function clickAt(x, y) {
   if (view.group.visible && view.pick(ray, hitRoom ? hitRoom.distance : Infinity)) return;
   if (shelfView.active) { if (!shelfView.multi) shelfView.tap(ray); return; }
   if (rig.focus) return;
-  // a tap on the bike (the pedals above all) flicks them back one turn, freewheeling
-  if (hitRoom && bike.isBike(hitRoom.object)) { const clicks = bike.spin(); if (clicks) sound.freewheel(clicks); return; }
+  // a tap on the bike (the pedals above all) pushes the pedals back, freewheeling; too many, too fast, and the chain comes off
+  if (hitRoom && bike.isBike(hitRoom.object)) { bike.tap(); return; }
   // otherwise: the nearest hotspot on screen within reach
   let best = null, bd = 90;
   for (const h of HOT) { if (!h.screen) continue; const d = Math.hypot(h.screen.x - x, h.screen.y - y); if (d < bd) { bd = d; best = h; } }

@@ -1,5 +1,5 @@
 // All sounds are synthesised with WebAudio (no files): typewriter clack, bell, correction "zzzt",
-// carriage return, TV click, bicycle freewheel, distant train, donkey bray and a rooster. Audio starts on first click.
+// carriage return, TV click, bicycle freewheel and chain, distant train, donkey bray and a rooster. Audio starts on first click.
 export class Sound {
   constructor() { this.ctx = null; this.on = true; }
   unlock() {
@@ -58,25 +58,51 @@ export class Sound {
     if (!this.ok) return; const t = this.ctx.currentTime;
     const o = this.ctx.createOscillator(); o.type = 'square'; o.frequency.value = 180; this.env(o, t, 0.005, 0.08, 0.15); o.start(t); o.stop(t + 0.2);
   }
-  // a bicycle freewheel as the pedals are flicked backwards: the pawls click over the ratchet. `times`
-  // are the seconds from now at which each click falls (close together at first, then slowing down),
-  // over a faint whirr of the hub and the chain that fades with the speed.
-  freewheel(times) {
-    if (!this.ok || !times.length) return; const t = this.ctx.currentTime + 0.01, end = times[times.length - 1];
-    if (!this.clickBuf) { const n = this.noise(0.03); this.clickBuf = n.buffer; }
-    times.forEach((dt, i) => {
-      const s = t + dt, k = i / times.length, v = (0.42 - 0.1 * k) * (0.85 + Math.random() * 0.3);
-      const n = this.ctx.createBufferSource(); n.buffer = this.clickBuf;
-      const hp = this.ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2200 + Math.random() * 1400;
-      const g = this.ctx.createGain(); g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(v, s + 0.0006); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.011);
-      n.connect(hp); hp.connect(g); g.connect(this.master); n.start(s); n.stop(s + 0.02);
-      // the pawl's little ring
+  // The bicycle's freewheel as the pedals are pushed backwards. The bike calls ratchet() once for each
+  // tooth the sprocket passes, so the clicks come exactly as fast as the pedals turn: a buzz when they
+  // fly, single ticks as they slow. `delay` is the seconds from now (inside the coming frame).
+  ratchet(delay, strength = 1) {
+    if (!this.ok) return;
+    const s = this.ctx.currentTime + 0.005 + delay;
+    if (s - (this.lastClick || 0) < 0.007) return; // beyond about 140 a second they are one buzz anyway
+    const dense = s - (this.lastClick || 0) < 0.02; this.lastClick = s;
+    if (!this.clickBuf) this.clickBuf = this.noise(0.03).buffer;
+    const v = (0.2 + 0.25 * strength) * (0.85 + Math.random() * 0.3);
+    const n = this.ctx.createBufferSource(); n.buffer = this.clickBuf;
+    const hp = this.ctx.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 2200 + Math.random() * 1400;
+    const g = this.ctx.createGain(); g.gain.setValueAtTime(0, s); g.gain.linearRampToValueAtTime(v, s + 0.0006); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.011);
+    n.connect(hp); hp.connect(g); g.connect(this.master); n.start(s); n.stop(s + 0.02);
+    if (!dense) { // the pawl's little ring, left out when they come too thick for it
       const o = this.ctx.createOscillator(); o.frequency.value = 3000 + Math.random() * 700;
       this.env(o, s, 0.0005, v * 0.3, 0.016); o.start(s); o.stop(s + 0.03);
-    });
-    const w = this.noise(end + 0.1); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 0.7;
-    const g = this.ctx.createGain(); g.gain.setValueAtTime(0.05, t); g.gain.exponentialRampToValueAtTime(0.0001, t + end);
-    w.connect(f); f.connect(g); g.connect(this.master); w.start(t);
+    }
+  }
+  // a faint whirr of the hub and the chain, following the speed of the pedals (level 0..1)
+  whirr(level) {
+    if (!this.ok) return;
+    if (!this.whirrGain) {
+      const n = this.noise(2); n.loop = true;
+      const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1400; f.Q.value = 0.7;
+      this.whirrGain = this.ctx.createGain(); this.whirrGain.gain.value = 0;
+      n.connect(f); f.connect(this.whirrGain); this.whirrGain.connect(this.master); n.start();
+    }
+    this.whirrGain.gain.setTargetAtTime(level * 0.07, this.ctx.currentTime, 0.04);
+  }
+  // the chain jumping off the ring: a sharp metallic snap and a thud
+  snap() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    const n = this.noise(0.08); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 2600; f.Q.value = 1.4;
+    n.connect(f); this.env(f, t, 0.001, 0.8, 0.07); n.start(t);
+    for (const [fr, v] of [[1900, 0.12], [3300, 0.09], [5100, 0.05]]) { const o = this.ctx.createOscillator(); o.frequency.value = fr; this.env(o, t, 0.001, v, 0.25); o.start(t); o.stop(t + 0.3); }
+    const o = this.ctx.createOscillator(); o.frequency.setValueAtTime(140, t); o.frequency.exponentialRampToValueAtTime(60, t + 0.12); this.env(o, t, 0.002, 0.3, 0.14); o.start(t); o.stop(t + 0.2);
+  }
+  // a length of chain landing on the floor: a bright metallic clink, louder the harder it lands
+  clink(delay, strength = 0.5) {
+    if (!this.ok) return; const t = this.ctx.currentTime + 0.005 + delay, v = 0.1 + 0.4 * strength;
+    const n = this.noise(0.05); const f = this.ctx.createBiquadFilter(); f.type = 'highpass'; f.frequency.value = 2500 + Math.random() * 1500;
+    n.connect(f); this.env(f, t, 0.001, v, 0.03); n.start(t);
+    const base = 2200 + Math.random() * 1800;
+    for (const [m, k] of [[1, 0.5], [1.52, 0.3], [2.31, 0.18]]) { const o = this.ctx.createOscillator(); o.frequency.value = base * m; this.env(o, t, 0.0008, v * k * 0.5, 0.05 + 0.08 * strength); o.start(t); o.stop(t + 0.2); }
   }
   tvClick() {
     if (!this.ok) return; const t = this.ctx.currentTime;
