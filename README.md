@@ -53,6 +53,7 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/typewriter-model.js` | The detailed electronic typewriter (keys, legends, LCD, paper slot) |
 | `src/phone.js` | The Sirio-style desk phone with its keypad and coiled cord |
 | `src/lamp.js` | The desk lamp: a Caltagirone majolica baluster with a pleated linen shade that glows at the blue hour |
+| `src/bike.js` | The 1990s Wheeler 2100 Pro Line in neon yellow, between the TV and the bookshelf: frame paint (splatter and decals) drawn into one texture, every other part merged into one mesh, spokes as lines |
 | `src/geo.js` | Noise and geometry helpers shared by the landscape and the animals |
 | `src/overlays.js` | Album, notebooks, cards, calendar, credits |
 | `src/audio.js` | Synthesised sounds |
