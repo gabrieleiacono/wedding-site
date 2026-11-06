@@ -318,14 +318,6 @@ function buildWestWall(room, anchors) {
   box(0.06, 0.012, dw + 0.04, M.frame, 0.03, 0.006, 0, door);
   anchors.door = new THREE.Vector3(x + 0.1, 1.3, dz);
 
-  // coat hooks with a coat and a scarf
-  box(0.03, 0.08, 0.5, M.walnutZ, x + 0.015, 1.72, 1.3, g);
-  for (let i = 0; i < 3; i++) cyl(0.008, 0.008, 0.06, M.brass, x + 0.05, 1.72, 1.13 + i * 0.17, g, 8).rotation.z = Math.PI / 2;
-  const coat = slab(0.07, 0.85, 0.36, 0.03, M.blue, 0.02);
-  coat.position.set(x + 0.08, 1.3, 1.16);
-  g.add(coat);
-  box(0.03, 0.7, 0.07, M.red, x + 0.075, 1.38, 1.48, g);
-
   // wall calendar
   const cal = new THREE.Group();
   cal.position.set(x + 0.012, 1.42, -0.42);

@@ -290,8 +290,6 @@ const leggimiAt = shelf.leggimi.getWorldPosition(new THREE.Vector3());
 // LEGGIMI: the glowing book and its neighbours, so you see it come out of the row
 const LEGGIMI_LEAN = () => frameView({ pts: around(leggimiAt, 0.2, 0.2, 0.08), dir: new THREE.Vector3(0, -0.12, 1), fov: 45 });
 const HIFI_LEAN = () => frameView({ pts: around(shelf.hifi.clone().add(new THREE.Vector3(0, -0.02, 0.12)), 0.27, 0.14, 0.11), dir: new THREE.Vector3(0.15, -0.2, 1), fov: 45 });
-// Door: walk up to it, lever and panels in view, as if about to leave
-const DOOR_LEAN = () => frameView({ pts: around(new THREE.Vector3(anchors.door.x, 1.25, anchors.door.z), 0.02, 0.55, 0.5), dir: new THREE.Vector3(-1, -0.08, 0.12), fov: 50 });
 
 // --- hotspots ----------------------------------------------------------------------------
 const HOT = [
@@ -313,7 +311,6 @@ const HOT = [
   { n: '♪', id: 'hifi', title: 'Mini hi-fi', sub: 'La playlist', at: shelf.hifi, wall: 2, lean: HIFI_LEAN, go: () => overlays.playlist() },
   { n: 'Aa', id: 'shelf', title: 'Scaffali', sub: 'Avvicinati e leggi i titoli', wall: 2, lean: shelfView.lean, go: () => { shelfView.enter(shelfAsk.ri, shelfAsk.x); shelfAsk = { ri: 0, x: null }; },
     at: (() => { const R = shelf.shelf.rows[3]; return shelf.shelf.group.localToWorld(new THREE.Vector3(0.15, R.y + 0.12, shelf.shelf.spineZ)); })() },
-  { n: '⌂', id: 'door', title: 'La porta', sub: 'Titoli di coda', at: anchors.door, wall: 3, lean: DOOR_LEAN, go: () => overlays.credits() },
 ];
 const shelfHot = HOT.find((h) => h.id === 'shelf');
 const windowGroup = anchors.shutter.shutter.parent;

@@ -1,10 +1,9 @@
 // Wall B (east): 32" flat-glass CRT on a black cabinet, VCR blinking 12:00, the grey console,
-// VHS tapes, a film poster and a wall clock (design F4).
+// VHS tapes, a potted plant and a wall clock (design F4).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk, makeScreen } from './ink.js';
 import { M, box, cyl, slab, ROOM, roundedShape, extrude } from './room.js';
 import { merge } from './geo.js';
-import { WEDDING } from './content.js';
 
 export function buildTV(room, teletext) {
   const g = new THREE.Group(); room.add(g);
@@ -108,14 +107,6 @@ export function buildTV(room, teletext) {
   const glow = new THREE.PointLight('#8AA0FF', 0.6, 3.5, 1.6);
   glow.position.set(screenWorld.x - 0.4, screenWorld.y, screenWorld.z); g.add(glow);
 
-  // poster ("La Villa — un film di…") to the left (north) of the TV
-  const posterCanvas = document.createElement('canvas'); posterCanvas.width = 256; posterCanvas.height = 360;
-  drawPoster(posterCanvas.getContext('2d'));
-  const posterTex = new THREE.CanvasTexture(posterCanvas); posterTex.colorSpace = THREE.SRGBColorSpace;
-  box(0.012, 0.74, 0.54, M.black, x - 0.006, 1.55, z - 0.95, g);
-  const poster = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.7), makeScreen(posterTex));
-  poster.position.set(x - 0.014, 1.55, z - 0.95); poster.rotation.y = -Math.PI / 2; g.add(poster);
-
   // clock to the right (south)
   const clock = new THREE.Group(); clock.position.set(x - 0.02, 1.75, z + 0.95); g.add(clock);
   const face = cyl(0.17, 0.17, 0.03, M.white, 0, 0, 0, clock, 32); face.rotation.z = Math.PI / 2;
@@ -126,7 +117,7 @@ export function buildTV(room, teletext) {
   box(0.004, 0.13, 0.008, M.black, 0, 0.065, 0, minHand);
   hourHand.position.x = -0.02; minHand.position.x = -0.024; clock.add(hourHand, minHand);
 
-  // potted plant on the floor just left (north) of the cabinet, under the poster
+  // potted plant on the floor just left (north) of the cabinet
   const pz = z - cw / 2 - 0.27;
   const pot = cyl(0.13, 0.1, 0.24, M.red, x - 0.25, 0.12, pz, g);
   for (let i = 0; i < 9; i++) {
@@ -176,16 +167,4 @@ function buildPad() {
   box(0.012, 0.004, 0.005, dark, -0.012, 0.023, -0.002, p).rotation.y = 0.4; box(0.012, 0.004, 0.005, dark, 0.012, 0.023, -0.002, p).rotation.y = -0.4;
   for (const sx of [-1, 1]) for (const k of [0, 1]) box(0.028, 0.008 - k * 0.002, 0.008, dark, sx * 0.05, 0.016 + k * 0.006, 0.03 + k * 0.006, p);
   return p;
-}
-
-function drawPoster(c) {
-  c.fillStyle = '#1F2A44'; c.fillRect(0, 0, 256, 360);
-  c.fillStyle = '#F2C14E'; c.beginPath(); c.arc(128, 160, 58, 0, 7); c.fill();
-  c.fillStyle = '#2F4A2E'; c.beginPath(); c.moveTo(0, 270); c.quadraticCurveTo(70, 200, 128, 236); c.quadraticCurveTo(190, 200, 256, 260); c.lineTo(256, 360); c.lineTo(0, 360); c.fill();
-  c.fillStyle = '#F1DFC2'; c.fillRect(110, 214, 36, 24); c.fillStyle = '#C2552E'; c.beginPath(); c.moveTo(104, 216); c.lineTo(128, 200); c.lineTo(152, 216); c.fill();
-  c.fillStyle = '#F3EEE4'; c.textAlign = 'center';
-  c.font = '800 34px "Bricolage Grotesque", sans-serif'; c.fillText('LA VILLA', 128, 52);
-  c.font = '500 12px "IBM Plex Mono", monospace'; c.fillText('UN FILM DI ' + WEDDING.names.toUpperCase(), 128, 74);
-  c.fillStyle = '#B3AA9A'; c.font = '500 11px "IBM Plex Mono", monospace'; c.fillText('PROSSIMAMENTE AL CINEMA', 128, 340);
-  c.strokeStyle = '#1A1714'; c.lineWidth = 3; c.strokeRect(1.5, 1.5, 253, 357);
 }

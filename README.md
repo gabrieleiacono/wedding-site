@@ -8,7 +8,7 @@ Turn around the room; every piece of wedding information lives in an object.
 - **Album, notebooks**: photos and five short stories
 - **Bookshelf**: 383 real books in their Italian editions. Tap a book (or the Aa hotspot) to get close to a shelf: drag along it, ▲▼ to change shelf, author chips to jump, pinch or wheel to zoom. Tap a book to take it out and read its library card. The glowing LEGGIMI book, the hi-fi playlist
 - **Window**: living landscape (trains on the viaduct, donkeys and foals, rooster, swallows); pull the shutter strap
-- **Calendar**: countdown. **Door**: closing credits. **Phone**: FAQ.
+- **Calendar**: countdown. **Phone**: FAQ.
 - `facts.html`: "Solo i fatti", a plain text version of everything.
 
 Design: see `knowledge/claude/final-design-scrittoio-con-vista.md` in the project files.
