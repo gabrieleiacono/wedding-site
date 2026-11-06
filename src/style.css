@@ -139,12 +139,8 @@ body.shelf #corner, body.shelf #hint { display: none; }
 .shelf-scroll { top: 50%; transform: translateY(-50%); font-size: 22px; padding: 0; }
 .shelf-scroll[data-scroll="1"] { left: calc(12px + env(safe-area-inset-left, 0px)); }
 .shelf-scroll[data-scroll="-1"] { right: calc(12px + env(safe-area-inset-right, 0px)); }
-.shelf-hint { left: 50%; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); white-space: nowrap; transition: opacity 0.6s; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
-#shelfui .authors { left: 50%; transform: translateX(-50%); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); max-width: calc(100% - 32px); display: flex; gap: 2px; padding: 4px; overflow-x: auto; scrollbar-width: none; white-space: nowrap; }
-#shelfui .authors::-webkit-scrollbar { display: none; }
-#shelfui .authors button { flex: none; border: none; background: transparent; color: var(--hud-dim); font: 500 12px 'IBM Plex Mono', monospace; padding: 0 12px; height: 36px; border-radius: 999px; cursor: pointer; }
-#shelfui .authors button.on { background: var(--accent); color: #fff; }
-#shelfui .authors button:focus-visible, .shelf-rows .btn:focus-visible { outline: 2px solid #fff; }
+.shelf-hint { left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); white-space: nowrap; transition: opacity 0.6s; max-width: calc(100% - 32px); overflow: hidden; text-overflow: ellipsis; }
+.shelf-rows .btn:focus-visible { outline: 2px solid #fff; }
 #shelfui.out .shelf-scroll, #shelfui.out .shelf-hint { display: none; }
 @media (max-width: 700px) { .shelf-scroll { display: none; } .shelf-rows span { display: none; } }
 

@@ -1,5 +1,5 @@
 // Wall C close-ups: "Scaffale da vicino" (the camera squares up to one shelf; drag along it, change
-// shelf, jump to an author's books, pinch or wheel to zoom) and "Tira fuori il libro" (tap a book: it slides
+// shelf, pinch or wheel to zoom) and "Tira fuori il libro" (tap a book: it slides
 // out, turns so its spine reads left to right, and a library card tells you what it is).
 // Only taps and drags, no hover.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
@@ -8,7 +8,6 @@ import { BOOK_NOTES } from './content.js';
 const FOV = 34;
 const TAN = Math.tan(THREE.MathUtils.degToRad(FOV / 2));
 const VIS = { base: 0.25, min: 0.085, max: 0.34 }; // metres of shelf visible top to bottom
-const AUTHORS = ['Calvino', 'Brancati', 'Jansson', 'Le Guin', 'Dick', 'Clarke', 'Atwood', 'Roth', 'Auster', 'DeLillo', 'Wallace', 'McCarthy', 'McEwan', 'Haruf', 'Varie'];
 const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
@@ -21,7 +20,6 @@ export class ShelfView {
     this.ri = 0; this.x = 0; this.tx = 0; this.y = 0; this.ty = 0; this.vis = VIS.base; this.tvis = VIS.base; this.vx = 0;
     this.pointers = new Map(); this.pinch = null;
     this.pulled = null; this.onLeggimi = () => {};
-    this.authorKey = (b) => (b.section ? 'Varie' : null) ?? AUTHORS.find((a) => (b.author || '').includes(a)) ?? (b.author || '').split(' ').pop();
     this.buildUI();
     // the dim veil that drops behind a book you've taken out
     this.veil = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshBasicMaterial({ color: '#140f0b', transparent: true, opacity: 0, side: THREE.DoubleSide }));
@@ -85,18 +83,6 @@ export class ShelfView {
     // the spine plane, seen square on: viewer's right is world -x
     const k = vis / innerHeight;
     return { x: this.tx - (sx - innerWidth / 2) * k, y: this.ty - (sy - innerHeight / 2) * k };
-  }
-  /** Scroll so a book by this author sits at the left of the screen. The books are shuffled, so
-   *  tapping the same author again moves on to their next book (top shelf first, left to right). */
-  jumpTo(author) {
-    const all = this.rows.flatMap((R, ri) => R.books.map((rec) => ({ ri, rec })));
-    const mine = all.filter((o) => this.authorKey(o.rec.b) === author);
-    if (!mine.length) return;
-    const prev = this.lastJump?.author === author ? mine.findIndex((o) => o.rec === this.lastJump.rec) : -1;
-    const { ri, rec } = mine[(prev + 1) % mine.length];
-    this.lastJump = { author, rec };
-    if (this.pulled) this.putBack(true);
-    this.tvis = this.baseVis(); this.setRow(ri, rec.pos.x - this.halfW(this.tvis) * 0.85);
   }
 
   // --- input ---------------------------------------------------------------------------------------
@@ -275,7 +261,6 @@ export class ShelfView {
       if (p.back && p.t >= 1) { p.mesh.userData.dispose(); this.s.setOnShelf(rest, true); this.pulled = null; this.veil.visible = false; }
       else if (!p.back) this.placeCard(place, b);
     }
-    this.markAuthor();
   }
   placeCard(place, b) {
     // the card sits under the book, which is centred `up` above the middle of the screen
@@ -283,25 +268,13 @@ export class ShelfView {
     const cy = innerHeight / 2 - place.up * pxPerM, half = (b.t / 1000) * pxPerM / 2;
     const top = Math.max(60, cy + half + 18);
     this.card.style.top = `${top}px`;
-    this.card.style.maxHeight = `${innerHeight - top - 76}px`;
-  }
-  markAuthor() {
-    const rec = this.pulled?.rec ?? this.centreBook();
-    const key = rec ? this.authorKey(rec.b) : null;
-    if (key === this.curAuthor) return;
-    this.curAuthor = key;
-    for (const c of this.chips.children) {
-      const on = c.dataset.author === key;
-      c.classList.toggle('on', on); c.setAttribute('aria-pressed', String(on));
-      if (on) c.scrollIntoView({ block: 'nearest', inline: 'center', behavior: 'smooth' });
-    }
+    this.card.style.maxHeight = `${innerHeight - top - 40}px`;
   }
 
   // --- the HUD for both close-ups --------------------------------------------------------------------
   buildUI() {
     const ui = document.createElement('div');
     ui.id = 'shelfui'; ui.hidden = true;
-    const present = AUTHORS.filter((a) => this.rows.some((R) => R.books.some((r) => this.authorKey(r.b) === a)));
     ui.innerHTML = `
       <div class="pill shelf-rows" role="group" aria-label="Ripiani">
         <button class="btn round" data-row="-1" aria-label="Ripiano sopra">▲</button>
@@ -310,16 +283,13 @@ export class ShelfView {
       </div>
       <button class="btn round pill shelf-scroll" data-scroll="1" aria-label="Scorri a sinistra">‹</button>
       <button class="btn round pill shelf-scroll" data-scroll="-1" aria-label="Scorri a destra">›</button>
-      <div class="pill shelf-hint">Trascina per scorrere · tocca un libro per tirarlo fuori</div>
-      <nav class="pill authors" aria-label="Vai a un autore">${present.map((a) => `<button type="button" data-author="${esc(a)}" aria-pressed="false">${esc(a)}</button>`).join('')}</nav>`;
+      <div class="pill shelf-hint">Trascina per scorrere · tocca un libro per tirarlo fuori</div>`;
     document.getElementById('hud').appendChild(ui);
     this.ui = ui;
-    this.chips = ui.querySelector('.authors');
     ui.addEventListener('click', (e) => {
       const t = e.target.closest('button'); if (!t) return;
       if (t.dataset.row) { if (this.pulled) this.putBack(true); this.setRow(this.ri + +t.dataset.row); }
       else if (t.dataset.scroll) this.pan(+t.dataset.scroll * this.halfW(this.tvis) * 1.2);
-      else if (t.dataset.author) this.jumpTo(t.dataset.author);
       this.hint(false);
     });
 
