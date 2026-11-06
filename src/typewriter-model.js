@@ -207,14 +207,14 @@ function housingDecal(W, H, rulerY) {
     x.lineWidth = 1.6; x.strokeStyle = '#ECEAE4';
     for (const [t, ty] of [['SMITH', -4], ['CORONA', 30]]) { x.fillText(t, 0, ty); x.strokeText(t, 0, ty); }
     x.restore();
-    // model lettering, right: XD in grey, 4950 outlined in red, then the two descriptive lines
-    const mx = 1478, base = H - 58;
+    // model lettering, right, level with the badge: XD in grey, 4950 outlined in red, then the two descriptive lines
+    const mx = 1478, base = H - 38;
     x.save(); x.textBaseline = 'alphabetic'; x.textAlign = 'left';
-    x.font = `italic 600 58px ${SANS}`; x.fillStyle = '#5C5A57'; x.fillText('XD', mx, base - 78);
+    x.font = `italic 600 54px ${SANS}`; x.fillStyle = '#5C5A57'; x.fillText('XD', mx, base - 72);
     const xw = x.measureText('XD ').width;
     x.lineWidth = 3; x.strokeStyle = RED; x.fillStyle = '#E8E2D3'; x.lineJoin = 'round';
-    x.fillText('4950', mx + xw, base - 78); x.strokeText('4950', mx + xw, base - 78);
-    x.fillStyle = '#5C5A57'; x.font = `italic 500 31px ${SANS}`; x.fillText('Word Processing Typewriter', mx, base - 36);
+    x.fillText('4950', mx + xw, base - 72); x.strokeText('4950', mx + xw, base - 72);
+    x.fillStyle = '#5C5A57'; x.font = `italic 500 30px ${SANS}`; x.fillText('Word Processing Typewriter', mx, base - 34);
     x.font = `italic 500 26px ${SANS}`; const line = 'Spell · Right Dictionary'; x.fillText(line, mx, base);
     const lw2 = x.measureText(line + ' ').width; // the little dictionary icon
     x.beginPath(); x.moveTo(mx + lw2 + 6, base); x.lineTo(mx + lw2 + 30, base); x.lineTo(mx + lw2 + 36, base - 18); x.lineTo(mx + lw2 + 12, base - 18); x.closePath(); x.fill();
