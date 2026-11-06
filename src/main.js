@@ -469,7 +469,28 @@ let bookOut = 0, bookTarget = 0;
 function pullBook(on) { bookTarget = on ? 1 : 0; }
 
 $('#audio').addEventListener('click', () => { sound.unlock(); const on = sound.toggle(); $('#audio').setAttribute('aria-pressed', String(on)); $('#audio').setAttribute('aria-label', on ? 'Audio acceso' : 'Audio spento'); });
-$('#title').textContent = `${WEDDING.names} · ${WEDDING.dateLong} · ${WEDDING.villa}`;
+// Top-left banner: one line when it fits beside the compass, stacked when it doesn't, hidden when even that collides.
+{
+  const title = $('#title'), compass = $('#compass');
+  const segs = [WEDDING.names, WEDDING.dateLong, `${WEDDING.villa} (${WEDDING.town})`];
+  title.setAttribute('aria-label', segs.join(', '));
+  segs.forEach((t, i) => {
+    if (i) { const sep = document.createElement('span'); sep.className = 'sep'; sep.textContent = ' · '; title.append(sep); }
+    const seg = document.createElement('span'); seg.className = 'seg'; seg.textContent = t; title.append(seg);
+  });
+  const fitTitle = () => {
+    title.classList.remove('stack', 'off');
+    if (getComputedStyle(title).display === 'none') return;
+    const clear = () => title.getBoundingClientRect().right + 12 <= compass.getBoundingClientRect().left;
+    if (clear()) return;
+    title.classList.add('stack');
+    if (!clear()) title.classList.add('off');
+  };
+  addEventListener('resize', fitTitle);
+  new ResizeObserver(fitTitle).observe(compass);
+  document.fonts?.ready.then(fitTitle);
+  fitTitle();
+}
 
 // --- resize -----------------------------------------------------------------------------------
 function resize() {

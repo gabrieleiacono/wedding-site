@@ -21,6 +21,11 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1E1B16; col
 #hud { position: fixed; inset: 0; pointer-events: none; }
 #hud > * { pointer-events: auto; }
 #title { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); top: calc(16px + env(safe-area-inset-top, 0px)); font-family: 'IBM Plex Mono', monospace; letter-spacing: 0.08em; text-transform: uppercase; font-size: 12px; }
+#title .seg { white-space: nowrap; }
+#title.stack { border-radius: 14px; line-height: 1.5; }
+#title.stack .sep { display: none; }
+#title.stack .seg { display: block; }
+#title.off { visibility: hidden; }
 #compass { position: absolute; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 4px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; }
 #compass button { width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent; color: var(--hud-fg); font-size: 22px; cursor: pointer; line-height: 1; }
 #compass button:hover { background: rgba(255, 255, 255, 0.1); }

@@ -2,13 +2,14 @@
 // Square brackets mark content still to be written.
 
 export const WEDDING = {
-  names: '[Atom] & [Nome]',
-  dateShort: '[GG/MM]',          // teletext header, e.g. '13/06'
-  dateLong: 'Sabato [GG mese AAAA]',
-  // ISO date used for the wall-calendar countdown. Placeholder: change it.
-  dateISO: '2027-06-12',
-  villa: '[Nome villa]',
-  address: '[Indirizzo della villa]',
+  names: 'Gabriele & Paola',
+  dateShort: '29/05',            // teletext header, e.g. '13/06'
+  dateLong: 'Sabato 29 maggio 2027',
+  // ISO date used for the wall-calendar countdown.
+  dateISO: '2027-05-29',
+  villa: 'Cascina Carretto',
+  town: 'Erbusco',
+  address: '[Via], 25030 Erbusco (BS)',
   rsvpBy: '[data]',
   contact: '[telefono / e-mail]',
 };
