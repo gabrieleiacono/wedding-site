@@ -88,7 +88,9 @@ function updateLight() {
   sun.color.set('#FFC88A').lerp(new THREE.Color('#F08A7A'), dusk);
   hemi.intensity = 1.0 - dusk * 0.35;
   hemi.color.set('#F4D2B0').lerp(new THREE.Color('#8A86B8'), dusk);
-  lamp.intensity = THREE.MathUtils.smoothstep(dusk, 0.35, 0.8) * 0.9;
+  const lampOn = THREE.MathUtils.smoothstep(dusk, 0.35, 0.8);
+  lamp.intensity = lampOn * 0.9;
+  anchors.lampGlow(lampOn);
   tv.glow.intensity = 0.1 + dusk * 0.3;
 }
 

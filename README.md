@@ -52,6 +52,7 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/creatures.js` | Articulated donkeys, foals, rooster and swallows, with their little behaviours |
 | `src/typewriter-model.js` | The detailed electronic typewriter (keys, legends, LCD, paper slot) |
 | `src/phone.js` | The Sirio-style desk phone with its keypad and coiled cord |
+| `src/lamp.js` | The desk lamp: a Caltagirone majolica baluster with a pleated linen shade that glows at the blue hour |
 | `src/geo.js` | Noise and geometry helpers shared by the landscape and the animals |
 | `src/overlays.js` | Album, notebooks, cards, calendar, credits |
 | `src/audio.js` | Synthesised sounds |

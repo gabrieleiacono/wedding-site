@@ -4,6 +4,7 @@ import * as THREE from '../vendor/three.module.min.js'; // by path, not an impor
 import { makeInk } from './ink.js';
 import { STORIES } from './content.js';
 import { buildSirio } from './phone.js';
+import { buildLamp } from './lamp.js';
 
 export const ROOM = { w: 4.2, d: 3.6, h: 2.9, hx: 2.1, hz: 1.8 };
 export const WINDOW = { x0: -0.62, x1: 0.62, y0: 0.88, y1: 2.35 };
@@ -36,8 +37,6 @@ export const M = {
   cork: makeInk({ color: '#B88A55', wash: 0.65 }),
   shutter: makeInk({ color: '#D8CDB8', wash: 0.5, spacing: 0.006 }),
   curtain: makeInk({ color: '#FBF4E6', wash: 0.2, transparent: true, opacity: 0.3, side: THREE.DoubleSide, emissive: 0.35, emissiveColor: '#FFE2C0' }),
-  lampShade: makeInk({ color: '#3E6B4A', wash: 0.7, side: THREE.DoubleSide }),
-  bulb: makeInk({ color: '#FFE7B0', wash: 0.4, emissive: 1.4 }),
   sirio: makeInk({ color: '#F2F0EA', wash: 0.3 }),
   sirioBlue: makeInk({ color: '#3D6FB6', wash: 0.75 }),
 };
@@ -251,19 +250,12 @@ function buildDesk(room, anchors) {
   g.add(remote);
   anchors.remote = new THREE.Vector3(0.3, top + 0.03, -1.2);
 
-  // articulated lamp, back left: base, two arms, a small shade aimed at the desk
-  const lamp = new THREE.Group();
-  lamp.position.set(-0.64, top, -1.68);
-  cyl(0.065, 0.075, 0.025, M.lampShade, 0, 0.0125, 0, lamp);
-  const a1 = cyl(0.007, 0.007, 0.41, M.grey, 0.04, 0.2, 0, lamp, 8); a1.rotation.z = -0.197;
-  const a2 = cyl(0.007, 0.007, 0.22, M.grey, 0.19, 0.41, 0, lamp, 8); a2.rotation.z = -1.48;
-  cyl(0.012, 0.012, 0.02, M.grey, 0.08, 0.4, 0, lamp, 8).rotation.x = Math.PI / 2;
-  const shade = new THREE.Mesh(new THREE.ConeGeometry(0.065, 0.11, 24, 1, true), M.lampShade);
-  shade.position.set(0.31, 0.39, 0); shade.rotation.z = 0.35; shade.castShadow = true; lamp.add(shade);
-  const bulb = new THREE.Mesh(new THREE.SphereGeometry(0.022, 12, 8), M.bulb);
-  bulb.position.set(0.325, 0.355, 0); lamp.add(bulb);
-  g.add(lamp);
-  anchors.lampBulb = new THREE.Vector3(-0.64 + 0.33, top + 0.33, -1.68);
+  // the majolica lamp from Caltagirone, back left (lamp.js)
+  const lamp = buildLamp();
+  lamp.group.position.set(-0.6, top, -1.64);
+  g.add(lamp.group); lamp.group.updateMatrixWorld(true);
+  anchors.lampBulb = lamp.group.localToWorld(lamp.bulb.clone());
+  anchors.lampGlow = lamp.setGlow;
 
   // pen cup with pencils
   cyl(0.035, 0.032, 0.1, M.red, 0.62, top + 0.05, -1.7, g);
