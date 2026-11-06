@@ -100,4 +100,22 @@ export const PLAYLIST = ['[Canzone 1 — Artista]', '[Canzone 2 — Artista]', '
 // on the spine (or "Author · Title" when two books share a title). Books without one show only the facts.
 export const BOOK_NOTES = {
   // 'Le città invisibili': '[Perché è qui, in una o due righe]',
+  'La causa dei vivi': 'Il romanzo della nostra amica Anna Gabriella.',
+};
+
+// A friend's novel, standing on the shelf just right of LEGGIMI. Taken out, it turns to show its cover
+// (tap it, or "Giralo", for the back) and its card links to the publisher's page, where it can be bought.
+// The book itself (cover art, spine, flaps) is drawn in src/friendbook.js.
+export const FRIEND_BOOK = {
+  title: 'La causa dei vivi',
+  author: 'Anna Gabriella Rusconi',
+  publisher: 'Cronache Ribelli',
+  series: 'Narrativa',
+  genre: 'Romanzo storico',
+  year: 2026,
+  pages: 314,
+  format: '15 × 21 cm',
+  isbn: '9791280257857',
+  blurb: 'Trento, 1475. Il vescovo Battista de’ Giudici arriva su ordine del papa per giudicare il processo alla comunità ebraica della città: le confessioni sono state estorte con la tortura, ma il principe vescovo vuole a ogni costo il suo santo martire.',
+  shop: { url: 'https://cronacheribelli.it/products/la-causa-dei-vivi', label: 'Vedilo su Cronache Ribelli' },
 };

@@ -43,6 +43,7 @@ export class ShelfView {
     this.tvis = this.vis = this.baseVis();
     this.setRow(ri, x ?? this.rows[ri].x1 - this.halfW() + 0.02, true);
     this.hint(true);
+    this.s.prefetch?.();
   }
   leave() {
     if (this.pulled) this.putBack(true);
@@ -130,6 +131,7 @@ export class ShelfView {
     const step = this.halfW(this.tvis) * 1.2;
     if (this.pulled) {
       if (e.key === 'ArrowLeft') this.step(-1); else if (e.key === 'ArrowRight') this.step(1); else if (e.key === 'Escape' || e.key === 'Enter') this.putBack();
+      else if ((e.key === ' ' || e.key.toLowerCase() === 'f') && this.pulled.mesh.userData.present && !e.target.closest?.('a, button')) this.flip();
       else return false;
       return true;
     }
@@ -145,7 +147,11 @@ export class ShelfView {
   }
   /** A tap: take out the book under it (or open LEGGIMI). */
   tap(ray) {
-    if (this.pulled) return true;
+    if (this.pulled) {
+      // a book that shows its cover turns over when you tap it
+      if (this.pulled.mesh.userData.present && ray.intersectObject(this.pulled.mesh, true).length) this.flip();
+      return true;
+    }
     const hit = ray.intersectObjects([...this.s.meshes, this.leggimiMesh], false)[0];
     if (!hit) return false;
     if (hit.object === this.leggimiMesh) { this.onLeggimi(); return true; }
@@ -164,7 +170,7 @@ export class ShelfView {
     if (this.pulled) this.putBack(true);
     this.s.setOnShelf(rec, false);
     const mesh = this.s.loose(rec);
-    this.pulled = { rec, mesh, t: 0, back: false };
+    this.pulled = { rec, mesh, t: 0, back: false, side: 0, sideT: 0 };
     this.sound?.slide?.();
     this.veil.visible = true;
     this.fillCard(rec);
@@ -172,6 +178,14 @@ export class ShelfView {
     this.card.hidden = false;
     // keep the gap it leaves on screen
     if (rec.row !== this.row.row) this.setRow(this.rows.findIndex((R) => R.row === rec.row), rec.pos.x);
+  }
+  /** Turn a book that shows its cover over, to its back and again to its front, through the spine. */
+  flip() {
+    const p = this.pulled; if (!p?.mesh.userData.present || p.back) return;
+    p.sideT = p.sideT ? 0 : 1;
+    this.sound?.slide?.();
+    const b = this.card.querySelector('[data-flip]'), label = p.sideT ? 'Giralo davanti' : 'Giralo dietro';
+    if (b) { b.setAttribute('aria-label', label); b.querySelector('.fl').textContent = label; }
   }
   putBack(now = false) {
     const p = this.pulled; if (!p) return;
@@ -193,6 +207,12 @@ export class ShelfView {
   fillCard(rec) {
     const b = rec.b;
     const pub = [b.publisher, b.series].filter(Boolean).join(' · ');
+    // a book you can buy: the link, and a button to turn it over, stay in view under its card
+    const shop = this.card.querySelector('.bc-buy');
+    shop.hidden = !b.shop?.url;
+    shop.innerHTML = b.shop?.url ? `
+        <a class="btn buy" href="${esc(b.shop.url)}" target="_blank" rel="noopener" aria-label="${esc([b.shop.label, b.shop.where].filter(Boolean).join(' '))} (si apre in una nuova scheda)">${esc(b.shop.label)}${b.shop.where ? `<span class="where">&nbsp;${esc(b.shop.where)}</span>` : ''} <span aria-hidden="true">↗</span></a>
+        <button type="button" class="btn" data-flip aria-label="Giralo dietro"><span aria-hidden="true">↻</span><span class="fl">Giralo dietro</span></button>` : '';
     const first = b.first_published && b.first_published !== b.year ? ` <span class="dim">(prima edizione ${esc(b.first_published)})</span>` : '';
     const note = BOOK_NOTES[b.title] ?? BOOK_NOTES[`${b.author} · ${b.title}`];
     this.card.querySelector('.bc-body').innerHTML = `
@@ -202,8 +222,11 @@ export class ShelfView {
         ${pub ? `<dt>Editore</dt><dd>${esc(pub)}</dd>` : ''}
         ${b.year ? `<dt>Anno</dt><dd>${esc(b.year)}${first}</dd>` : ''}
         ${b.translator ? `<dt>Traduzione</dt><dd>${esc(b.translator)}</dd>` : ''}
+        ${b.pages ? `<dt>Pagine</dt><dd>${esc(b.pages)}${b.format ? ` <span class="dim">· ${esc(b.format)}</span>` : ''}</dd>` : ''}
       </dl>
+      ${b.blurb ? `<p class="blurb">${esc(b.blurb)}</p>` : ''}
       ${note ? `<p class="note">${esc(note)}</p>` : ''}`;
+    this.card.classList.toggle('presents', !!b.shop);
     this.card.setAttribute('aria-label', `${b.title}, ${b.author}`);
   }
 
@@ -214,7 +237,10 @@ export class ShelfView {
     // with a book out, the camera eases back so the whole book fits across the screen in front of the shelf
     let vis = this.tvis, place = null;
     const p = this.pulled;
-    if (p) {
+    if (p && p.mesh.userData.present) {
+      place = this.coverPlace(p.rec.b);
+      vis = Math.max(this.tvis, (place.L + p.rec.b.d / 1000 + 0.1) * 2 * TAN);
+    } else if (p) {
       const b = p.rec.b, h = b.h / 1000, narrow = innerWidth < 700;
       const frac = narrow ? 0.94 : 0.78;
       const L = Math.max(0.16, h / (frac * 2 * TAN * this.aspect()));
@@ -234,12 +260,26 @@ export class ShelfView {
       // where it goes: in front of the camera, lying so the spine's lettering runs left to right
       const camZ = z - d;
       
-      const down = /down/i.test(String(b.spine?.title_orientation || 'up'));
-      const holdQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), down ? -Math.PI / 2 : Math.PI / 2);
-      // tipped towards the eye, which is below it, so you see the spine square on
-      holdQ.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.atan2(place.up, place.L)));
-      // the spine face sits at distance L, the book behind it
-      const hold = new THREE.Vector3(this.x, this.y + place.up, camZ + place.L).add(new THREE.Vector3(0, 0, b.d / 2000).applyQuaternion(holdQ));
+      let holdQ, hold;
+      if (place.cover) {
+        // upright, its front cover to you (-x is the front), turned a little so you see the spine too, and
+        // swaying gently; turning it over swings it round through the spine to the back
+        p.side += (p.sideT - p.side) * Math.min(1, dt * 5);
+        p.clock = (p.clock ?? 0) + dt;
+        const s = ease(THREE.MathUtils.clamp(p.side, 0, 1)), quarter = 0.4 + Math.sin(p.clock * 0.8) * 0.05;
+        const yaw = THREE.MathUtils.lerp(-Math.PI / 2 + quarter, Math.PI / 2 - quarter, s);
+        holdQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), yaw + Math.atan2(place.across, place.L));
+        holdQ.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.atan2(place.up, place.L)));
+        hold = new THREE.Vector3(this.x + place.across, this.y + place.up, camZ + place.L + b.t / 2000);
+        p.mesh.userData.tick?.(dt, !p.back && p.t > 0.5);
+      } else {
+        const down = /down/i.test(String(b.spine?.title_orientation || 'up'));
+        holdQ = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), down ? -Math.PI / 2 : Math.PI / 2);
+        // tipped towards the eye, which is below it, so you see the spine square on
+        holdQ.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), -Math.atan2(place.up, place.L)));
+        // the spine face sits at distance L, the book behind it
+        hold = new THREE.Vector3(this.x, this.y + place.up, camZ + place.L).add(new THREE.Vector3(0, 0, b.d / 2000).applyQuaternion(holdQ));
+      }
       const out = rest.pos.clone(); out.z -= b.d / 1000 * 0.8;
       let pos, q;
       const e = ease(p.t);
@@ -262,7 +302,43 @@ export class ShelfView {
       else if (!p.back) this.placeCard(place, b);
     }
   }
+  /**
+   * Where a book that shows its cover is held: on a wide screen it stands left of centre, most of the
+   * screen's height, with its card beside it; on a phone it sits in the top part, the card below.
+   * L is the distance from the eye to the cover, across and up its offset from the middle of the view.
+   */
+  coverPlace(b) {
+    const h = b.h / 1000, w = b.d / 1000, A = this.aspect();
+    const side = A >= 1.15 && innerWidth >= 760;
+    if (side) {
+      const L = h / ((innerHeight < 560 ? 0.74 : 0.66) * 2 * TAN), hv = 2 * L * TAN;
+      return { cover: true, side, L, up: 0.015 * hv, across: (0.5 - 0.3) * hv * A, b };
+    }
+    const L = Math.max(h / (0.31 * 2 * TAN), w / (0.56 * 2 * TAN * A)), hv = 2 * L * TAN, k = innerHeight / hv;
+    const centre = Math.min(innerHeight / 2, 116 + (h / 2) * k); // its top just under the buttons at the top
+    return { cover: true, side, L, up: (innerHeight / 2 - centre) / k, across: 0, b };
+  }
   placeCard(place, b) {
+    if (place.cover) {
+      const hv = 2 * place.L * TAN, k = innerHeight / hv;
+      if (place.side) {
+        // beside the book: from just right of it to the edge of the screen
+        const right = innerWidth / 2 - place.across * k + (b.d / 2000) * k + 36;
+        this.card.classList.add('side');
+        this.card.style.left = `${right}px`;
+        this.card.style.width = `${Math.min(470, innerWidth - right - 28)}px`;
+        this.card.style.top = ''; this.card.style.maxHeight = `${innerHeight - 150}px`;
+      } else {
+        this.card.classList.remove('side');
+        const top = innerHeight / 2 - place.up * k + (b.h / 2000) * k + 18;
+        this.card.style.left = this.card.style.width = '';
+        this.card.style.top = `${top}px`;
+        this.card.style.maxHeight = `${innerHeight - top - 16}px`;
+      }
+      return;
+    }
+    this.card.classList.remove('side');
+    this.card.style.left = this.card.style.width = '';
     // the card sits under the book, which is centred `up` above the middle of the screen
     const hv = 2 * place.L * TAN, pxPerM = innerHeight / hv;
     const cy = innerHeight / 2 - place.up * pxPerM, half = (b.t / 1000) * pxPerM / 2;
@@ -296,6 +372,7 @@ export class ShelfView {
     const card = document.createElement('article');
     card.id = 'bookcard'; card.hidden = true;
     card.innerHTML = `<div class="bc-body"></div>
+      <div class="bc-buy" hidden></div>
       <div class="bc-nav">
         <button type="button" class="btn" data-step="-1" aria-label="Il libro prima">‹</button>
         <button type="button" class="btn" data-put>Rimetti a posto</button>
@@ -304,7 +381,7 @@ export class ShelfView {
     document.getElementById('hud').appendChild(card);
     card.addEventListener('click', (e) => {
       const t = e.target.closest('button'); if (!t) return;
-      if (t.dataset.step) this.step(+t.dataset.step); else this.putBack();
+      if (t.dataset.step) this.step(+t.dataset.step); else if (t.dataset.flip != null) this.flip(); else this.putBack();
     });
     this.card = card;
   }

@@ -8,8 +8,8 @@ export function rng(seed) { return () => { seed |= 0; seed = (seed + 0x6D2B79F5)
 export function hashStr(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619); return h >>> 0; }
 
 // Webfonts standing in for the faces Italian publishers use on their spines.
-const FONT_CSS = 'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Jost:ital,wght@0,300..900;1,300..900&family=Oswald:wght@300..700&family=Inter:wght@300..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Archivo+Narrow:ital,wght@0,400..700;1,400..700&family=Libre+Franklin:ital,wght@0,300..900;1,300..900&display=swap';
-export const FONTS = ['EB Garamond', 'Libre Baskerville', 'Bodoni Moda', 'Jost', 'Oswald', 'Inter', 'Playfair Display', 'Archivo Narrow', 'Libre Franklin'];
+const FONT_CSS = 'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=Libre+Baskerville:ital,wght@0,400;0,700;1,400&family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Jost:ital,wght@0,300..900;1,300..900&family=Oswald:wght@300..700&family=Inter:wght@300..900&family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Archivo+Narrow:ital,wght@0,400..700;1,400..700&family=Libre+Franklin:ital,wght@0,300..900;1,300..900&family=Cinzel:wght@400..700&display=swap';
+export const FONTS = ['EB Garamond', 'Libre Baskerville', 'Bodoni Moda', 'Jost', 'Oswald', 'Inter', 'Playfair Display', 'Archivo Narrow', 'Libre Franklin', 'Cinzel'];
 export function loadSpineFonts() {
   if (typeof document === 'undefined') return Promise.resolve();
   if (!document.querySelector('link[data-spine-fonts]')) {
@@ -17,7 +17,7 @@ export function loadSpineFonts() {
   }
   const wait = new Promise((r) => setTimeout(r, 6000));
   const loads = [];
-  for (const f of FONTS) for (const w of [400, 700]) { loads.push(document.fonts.load(`${w} 20px "${f}"`)); loads.push(document.fonts.load(`italic ${w} 20px "${f}"`)); }
+  for (const f of FONTS) for (const w of [400, 700]) { loads.push(document.fonts.load(`${w} 20px "${f}"`)); if (f !== 'Cinzel') loads.push(document.fonts.load(`italic ${w} 20px "${f}"`)); }
   return Promise.race([Promise.allSettled(loads), wait]);
 }
 
@@ -26,6 +26,7 @@ const GENERIC = { serif: 'EB Garamond', sans: 'Jost', condensed: 'Oswald', didon
 export function fontFamily(desc = '') {
   const d = String(desc).toLowerCase();
   if (GENERIC[d]) return GENERIC[d];
+  if (/cinzel|trajan|lapidar/.test(d)) return 'Cinzel';
   if (/garamond|simoncini|bembo|sabon|janson|caslon|times|minion|plantin|old ?style|book/.test(d)) return 'EB Garamond';
   if (/baskerville|georgia|century|electra|scotch/.test(d)) return 'Libre Baskerville';
   if (/bodoni|didot|didone|walbaum/.test(d)) return 'Bodoni Moda';
@@ -332,6 +333,7 @@ function wear(x, book, W, H, r, bg) {
   const g = x.createLinearGradient(0, 0, W, 0);
   g.addColorStop(0, `rgba(0,0,0,${edge})`); g.addColorStop(0.12, 'rgba(0,0,0,0)'); g.addColorStop(0.5, 'rgba(255,250,235,0.04)'); g.addColorStop(0.88, 'rgba(0,0,0,0)'); g.addColorStop(1, `rgba(0,0,0,${edge})`);
   x.fillStyle = g; x.fillRect(0, 0, W, H);
+  if (book.mint) { x.restore(); return; } // just out of the bookshop: no fading, creases or rubbing yet
   // sun fade, stronger towards the head of the book, which faced the window for years
   const fade = (book.age ?? 0.5) * (0.06 + r() * 0.1);
   const f = x.createLinearGradient(0, 0, 0, H);
@@ -379,6 +381,8 @@ function drawTop(x, book, W, D, r) {
   x.globalAlpha = 0.22; x.fillStyle = '#6a5a40'; x.fillRect(board, D - inset - 6, W - board * 2, 6); // dust settles at the open edge
   x.globalAlpha = 1;
   if (book.ribbon) { x.fillStyle = hex(book.ribbon); x.fillRect(W * 0.4, D * 0.4, 0.9, D * 0.5); }
+  // a paperback with flaps: each flap, folded inside its cover, shows as a coloured hairline at the fore-edge end
+  if (book.flaps) { x.fillStyle = hex(book.flaps); x.fillRect(board, D - book.flapW, 0.3, book.flapW); x.fillRect(W - board - 0.3, D - book.flapW, 0.3, book.flapW); }
 }
 
 // --- house designs ----------------------------------------------------------------------------

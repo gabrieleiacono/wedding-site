@@ -3,7 +3,7 @@
 set -e
 OUT=${1:-dist}
 rm -rf "$OUT" && mkdir -p "$OUT"
-cp -r src vendor facts.html "$OUT"/
+cp -r src vendor assets facts.html "$OUT"/
 python3 - "$OUT" <<'PY'
 import re, sys
 s = open('index.html').read()

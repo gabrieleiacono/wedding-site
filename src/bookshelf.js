@@ -7,6 +7,7 @@ import { makeInk } from './ink.js';
 import { M, box, cyl, ROOM } from './room.js';
 import { BOOKS } from './books-data.js';
 import { SpineAtlas, bookUV, rng, hashStr, loadSpineFonts, applySeries } from './spines.js';
+import { friendBook, buildFriendBook, preloadFriendCover, whenCinzel } from './friendbook.js';
 
 // The books stand in a shuffled order, not by author: the same order for every visitor, picked by
 // this seed (change it for another arrangement).
@@ -59,20 +60,22 @@ export function buildBookshelf(room) {
       ],
     },
   };
-  const atlas = new SpineAtlas(books, 4096);
+  const friend = friendBook(); // a friend's novel, standing just right of LEGGIMI
+  const atlas = new SpineAtlas([...books, friend], 4096);
   const lgAtlas = new SpineAtlas([leggimiBook], 1024);
-  const fontsReady = loadSpineFonts().then(() => { atlas.draw(); lgAtlas.draw(); });
+  const fontsReady = loadSpineFonts().then(() => { atlas.draw(); lgAtlas.draw(); whenCinzel(() => atlas.draw()); });
 
   // --- shelf plan, top row first, each row in the viewer's left-to-right order ----------------
   // The viewer's left bay is world +x. A part is books (flexible), an object, or space kept free.
   const PLAN = [
     [[['books']], [['books'], ['reserve', 'altro', 0.3]]],
     [[['globe', 0.55], ['books']], [['books']]],
-    [[['hifi', 0.45], ['reserve', 'cd', 0.48], ['books']], [['books'], ['leggimi'], ['books']]],
+    [[['hifi', 0.45], ['reserve', 'cd', 0.48], ['books']], [['books'], ['leggimi'], ['friend'], ['books']]],
     [[['books']], [['books']]],
     [[['reserve', 'cd', 0]], [['reserve', 'vhs', 0]]],
     [[['reserve', 'vinili', 0]], [['reserve', 'vinili', 0]]],
   ];
+  const friendW = friend.t / 1000 + 0.009;
   const bayEdges = (bay) => { const lo = x0 - W / 2 + 0.015 + bay * (W / 2) + 0.004; return [lo, lo + W / 2 - 0.038]; };
   const rowY = (row) => 0.04 + row * inner + board / 2;
 
@@ -82,7 +85,7 @@ export function buildBookshelf(room) {
     const row = sh - 1 - k;
     bays.forEach((parts, vb) => {
       const bay = vb === 0 ? 1 : 0, [lo, hi] = bayEdges(bay);
-      const fixed = parts.reduce((s, p) => s + (p[0] === 'books' ? 0 : p[0] === 'leggimi' ? 0.06 : p[0] === 'reserve' ? (p[2] || 0) : p[1]), 0);
+      const fixed = parts.reduce((s, p) => s + (p[0] === 'books' ? 0 : p[0] === 'leggimi' ? 0.06 : p[0] === 'friend' ? friendW : p[0] === 'reserve' ? (p[2] || 0) : p[1]), 0);
       const flex = parts.filter((p) => p[0] === 'books').length;
       parts.forEach((p) => segs.push({ row, bay, lo, hi, p, cap: p[0] === 'books' ? (hi - lo - fixed) / flex : 0 }));
     });
@@ -194,6 +197,10 @@ export function buildBookshelf(room) {
       const light = new THREE.PointLight('#FFD27A', 0.25, 0.8, 2); light.position.set(lx, y + 0.2, front - 0.05); g.add(light);
       anchors.leggimiLight = light;
       cursor.set(id, xs - 0.06);
+    } else if (kind === 'friend') {
+      // upright, square to the shelf, a finger's width from LEGGIMI
+      standBook(friend, xs - 0.005 - friend.t / 1000, y);
+      cursor.set(id, xs - friendW);
     }
   }
   // anything that didn't fit lies flat on top of the standing rows
@@ -303,6 +310,7 @@ export function buildBookshelf(room) {
         }
         R.spines.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
         R.spines.material = a.mat;
+        if (R.books.some((r) => r.b.friend)) whenCinzel(() => { if (sharp.get(R.row) === a) a.draw(); });
       });
       sharp.set(R.row, a);
       while (sharp.size > 2) {
@@ -323,6 +331,7 @@ export function buildBookshelf(room) {
     },
     /** A loose copy of a book with its own very sharp spine, for holding up to the camera. */
     loose(rec) {
+      if (rec.b.friend) { const m = buildFriendBook(rec.b); m.position.copy(rec.pos); m.quaternion.copy(rec.quat); g.add(m); return m; }
       const b = rec.b, a = new SpineAtlas([b], 1024, { spinesOnly: true, height: 4096, maxScale: 16, secondary: true, hatch: 0, wash: 1, deferDraw: true });
       a.draw();
       const geo = new THREE.BoxGeometry(b.t / 1000, b.h / 1000, b.d / 1000); bookUV(geo, b, 5, a.uv.get(b));
@@ -331,6 +340,8 @@ export function buildBookshelf(room) {
       m.userData.dispose = () => { g.remove(m); geo.dispose(); a.dispose(); };
       return m;
     },
+    /** Fetch what a close-up will need before it is asked for (the friend's book's cover picture). */
+    prefetch() { fontsReady.then(preloadFriendCover); },
     bookAt(hit) { const o = hit?.object?.userData?.owner; return o ? recs[o[hit.faceIndex]] : null; },
   };
   anchors.bookCount = placed.length;

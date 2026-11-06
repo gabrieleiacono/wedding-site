@@ -6,7 +6,7 @@ Turn around the room; every piece of wedding information lives in an object.
 - **Typewriter**: RSVP (6 questions on the LCD, type with your keyboard)
 - **TV + remote**: teletext pages (100 index, 101 programme, 200 travel, 210 stay, 300 weather, 400 dress code, 500 RSVP, 600 live guestbook, 700 FAQ, 888 hidden). AV = the console's tennis game.
 - **Album, notebooks**: photos and five short stories
-- **Bookshelf**: 383 real books in their Italian editions. Tap a book (or the Aa hotspot) to get close to a shelf: drag along it, ▲▼ to change shelf, author chips to jump, pinch or wheel to zoom. Tap a book to take it out and read its library card. The glowing LEGGIMI book, the hi-fi playlist
+- **Bookshelf**: 383 real books in their Italian editions. Tap a book (or the Aa hotspot) to get close to a shelf: drag along it, ▲▼ to change shelf, author chips to jump, pinch or wheel to zoom. Tap a book to take it out and read its library card. The glowing LEGGIMI book, the hi-fi playlist. Just right of LEGGIMI stands a friend's novel, *La causa dei vivi* (Anna Gabriella Rusconi, Cronache Ribelli): taken out, it turns to show its cover (tap it to turn it over) and its card links to the publisher's page
 - **Bike**: a yellow Wheeler 2100 in the corner between the TV and the shelf. Tap it, the pedals above all, and the pedals get a push backwards (one tap = one turn), clicking like a freewheel at exactly the speed they turn; taps add up. Tap it faster than 5 a second (8 taps within 1.5 s) and the chain falls off the ring, for good until the page is reloaded.
 - **Window**: living landscape (trains on the viaduct, donkeys and foals, rooster, swallows); pull the shutter strap
 - **Calendar**: countdown. **Phone**: FAQ.
@@ -48,7 +48,8 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/teletext.js`, `src/tennis.js` | Teletext engine + pages, AV tennis |
 | `src/tv.js`, `src/bookshelf.js` | East and south walls; the bookshelf draws each shelf as two meshes so its spines can swap to a sharper texture |
 | `src/spines.js` | Spines drawn in canvas from the research data (typography, publisher marks, wear) and packed into atlases |
-| `src/shelfview.js` | Shelf close-up and taking a book out (its library card notes live in `BOOK_NOTES` in `content.js`) |
+| `src/shelfview.js` | Shelf close-up and taking a book out (its library card notes live in `BOOK_NOTES` in `content.js`); a book with a `shop` link is held cover first, with its card beside it |
+| `src/friendbook.js` | *La causa dei vivi*: its spine for the shelf, and the paperback you take out (cover boards, spine, red flaps, page block; front cover from `assets/books/`, back drawn in Cinzel). Its card text and link are `FRIEND_BOOK` in `content.js` |
 | `src/landscape.js` | The view from the window: 3D terrain, fields, trees, casale, chapel, hill town, viaduct and trains, sky and clouds |
 | `src/creatures.js` | Articulated donkeys, foals, rooster and swallows, with their little behaviours |
 | `src/typewriter-model.js` | The detailed electronic typewriter (keys, legends, LCD, paper slot) |
