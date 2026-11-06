@@ -97,7 +97,7 @@ const WALLS = [
   { yaw: 0, name: 'A · La scrivania' }, { yaw: -Math.PI / 2, name: 'B · Il televisore' },
   { yaw: Math.PI, name: 'C · La libreria' }, { yaw: Math.PI / 2, name: 'D · La porta' },
 ];
-const rig = { yaw: 0, pitch: -0.15, vyaw: 0, targetYaw: null, dragging: false, focus: null, t: 0, from: null,
+const rig = { yaw: 0, pitch: -0.15, vyaw: 0, targetYaw: null, home: null, dragging: false, focus: null, t: 0, from: null,
   lens: { fov: 60, cx: innerWidth / 2, cy: innerHeight / 2 }, peek: { yaw: 0, pitch: 0 }, peekS: { yaw: 0, pitch: 0 }, peeking: false, kbBottom: innerHeight };
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const nearestWall = () => WALLS.reduce((b, w) => (Math.abs(wrap(rig.yaw - w.yaw)) < Math.abs(wrap(rig.yaw - b.yaw)) ? w : b));
@@ -113,7 +113,8 @@ function eyeAt(yaw, out = new THREE.Vector3()) {
   return out.set(cr(P(-1)[0], P(0)[0], P(1)[0], P(2)[0]), EYE.y, cr(P(-1)[1], P(0)[1], P(1)[1], P(2)[1]));
 }
 function lookDir(yaw, pitch) { return new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)); }
-function turn(dir) { const w = nearestWall(); rig.targetYaw = w.yaw + dir * Math.PI / 2; }
+// the compass arrows and the arrow keys still step round to the next wall; dragging never does
+function turn(dir) { const w = nearestWall(); rig.targetYaw = w.yaw + dir * Math.PI / 2; rig.vyaw = 0; }
 function setFov() {
   const aspect = innerWidth / innerHeight;
   const base = innerWidth < 700 ? 70 : 60;
@@ -126,20 +127,24 @@ setFov();
 let down = null;
 canvas.addEventListener('pointerdown', (e) => {
   sound.unlock();
-  down = { x: e.clientX, y: e.clientY, t: performance.now(), moved: 0 };
+  down = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: 0, trail: [] };
   if (shelfView.active) { shelfView.pointerDown(e); canvas.setPointerCapture(e.pointerId); return; }
   if (rig.focus) { if (rig.focus.peek) { rig.peeking = true; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId); } return; }
-  rig.dragging = true; rig.targetYaw = null; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId);
+  rig.dragging = true; rig.targetYaw = null; rig.vyaw = 0; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId);
 });
 canvas.addEventListener('pointermove', (e) => {
   if (shelfView.active) shelfView.pointerMove(e);
   if (!down) return;
-  const dx = e.movementX ?? 0, dy = e.movementY ?? 0;
+  // deltas from the pointer's own position (movementX is 0 for touch in some browsers)
+  const dx = e.clientX - down.lx, dy = e.clientY - down.ly; down.lx = e.clientX; down.ly = e.clientY;
   down.moved = Math.max(down.moved + Math.abs(dx) + Math.abs(dy), Math.hypot(e.clientX - down.x, e.clientY - down.y));
   if (rig.peeking) { peekBy(dx * 0.004, dy * 0.004); return; }
   if (!rig.dragging) return;
   const k = 0.0045 * (60 / camera.fov) ** -1;
-  rig.yaw += dx * k; rig.vyaw = dx * k;
+  rig.yaw += dx * k;
+  // the last tenth of a second of the drag, to know how fast you were turning when you let go
+  const now = performance.now(); down.trail.push({ t: now, yaw: rig.yaw });
+  while (down.trail.length > 2 && now - down.trail[0].t > 100) down.trail.shift();
   rig.pitch = THREE.MathUtils.clamp(rig.pitch + dy * k, THREE.MathUtils.degToRad(-25), THREE.MathUtils.degToRad(15));
   $('#hint').style.opacity = 0;
 });
@@ -147,10 +152,14 @@ canvas.addEventListener('pointerup', (e) => {
   if (shelfView.active) shelfView.pointerUp(e);
   if (rig.dragging || rig.peeking) { rig.dragging = rig.peeking = false; canvas.classList.remove('dragging'); }
   if (down && down.moved < 8) clickAt(e.clientX, e.clientY);
-  else if (!rig.focus) { rig.yaw += rig.vyaw * 8; rig.targetYaw = nearestWall().yaw + Math.round(wrap(rig.yaw - nearestWall().yaw) / (Math.PI / 2)) * Math.PI / 2; }
+  else if (!rig.focus && down) {
+    // let go mid-turn and the room keeps turning a little, then settles wherever it is: no snapping to a wall
+    const tr = down.trail, a = tr[0], b = tr[tr.length - 1], now = performance.now();
+    rig.vyaw = a && b !== a && now - b.t < 60 ? THREE.MathUtils.clamp(wrap(b.yaw - a.yaw) / ((b.t - a.t) / 1000), -4, 4) : 0;
+  }
   down = null;
 });
-canvas.addEventListener('pointercancel', (e) => { if (shelfView.active) shelfView.pointerUp(e); down = null; rig.peeking = false; });
+canvas.addEventListener('pointercancel', (e) => { if (shelfView.active) shelfView.pointerUp(e); down = null; rig.dragging = rig.peeking = false; rig.vyaw = 0; canvas.classList.remove('dragging'); });
 // at the window you can look around a little (drag, or the arrow keys), but not turn your back on it
 function peekBy(dyaw, dpitch) {
   rig.peek.yaw = THREE.MathUtils.clamp(rig.peek.yaw + dyaw, -0.9, 0.9);
@@ -281,12 +290,13 @@ for (const h of HOT) {
 function activate(h) {
   if (overlays.open) return;
   if (rig.focus && rig.focus !== h) unfocus(true);
-  const w = WALLS[h.wall];
-  rig.targetYaw = rig.yaw + wrap(w.yaw - rig.yaw);
   if (h.lean) focus(h);
   h.go?.();
 }
 function focus(h) {
+  // remember where you were standing and looking, so Back brings you there and not to a preset spot
+  if (!rig.focus) rig.home = { yaw: rig.yaw, pitch: rig.pitch };
+  rig.targetYaw = null; rig.vyaw = 0;
   rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), ...rig.lens };
   rig.focus = h; rig.t = 0;
   rig.peek.yaw = rig.peek.pitch = rig.peekS.yaw = rig.peekS.pitch = 0;
@@ -298,10 +308,12 @@ function unfocus(quick) {
   if (!rig.focus) return;
   const h = rig.focus;
   rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), ...rig.lens, back: true };
-  // recover yaw/pitch from the current gaze so the return is seamless
-  const d = camera.getWorldDirection(new THREE.Vector3());
-  rig.yaw = Math.atan2(-d.x, -d.z); rig.pitch = THREE.MathUtils.clamp(Math.asin(d.y), -0.43, 0.26);
-  rig.targetYaw = nearestWall().yaw; rig.pitch = -0.15;
+  // back to where you were before the close-up (or, if there's no record, to where the close-up was looking)
+  if (rig.home) { rig.yaw = rig.home.yaw; rig.pitch = rig.home.pitch; } else {
+    const d = camera.getWorldDirection(new THREE.Vector3());
+    rig.yaw = Math.atan2(-d.x, -d.z); rig.pitch = THREE.MathUtils.clamp(Math.asin(d.y), THREE.MathUtils.degToRad(-25), THREE.MathUtils.degToRad(15));
+  }
+  rig.home = null; rig.targetYaw = null; rig.vyaw = 0;
   rig.focus = null; rig.t = quick ? 1 : 0; rig.peeking = false;
   document.body.classList.remove('focused');
   $('#back').hidden = true; $('#help').hidden = true;
@@ -551,12 +563,17 @@ function shadowsMoved() {
 }
 function drawFrame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  // free look: inertia + soft snap
+  // free look: a turn you let go of coasts to a stop on its own; only the compass arrows aim at a wall
   if (!rig.dragging && rig.targetYaw !== null) {
     const d = wrap(rig.targetYaw - rig.yaw);
     rig.yaw += d * Math.min(1, dt * 3.2); // unhurried, so the walk round the room reads
     if (Math.abs(d) < 0.001) { rig.yaw = rig.targetYaw; rig.targetYaw = null; }
+  } else if (!rig.dragging && rig.vyaw) {
+    rig.yaw += rig.vyaw * dt;
+    rig.vyaw *= Math.exp(-dt * 7); // a flick carries on for about a seventh of its speed: never more than ~30°
+    if (Math.abs(rig.vyaw) < 0.02) rig.vyaw = 0;
   }
+  rig.yaw = wrap(rig.yaw);
   shelfView.update(dt, camera);
   const sk = Math.min(1, dt * 8);
   rig.kbBottom += (visibleBottom() - rig.kbBottom) * sk;
@@ -580,7 +597,7 @@ function drawFrame(now) {
   $('#wall-name').textContent = nearestWall().name;
 
   // window life runs only when you can see it
-  const facingNorth = Math.abs(wrap(rig.yaw)) < 1.25 && (!rig.focus || rig.focus.wall === 0);
+  const facingNorth = rig.focus ? rig.focus.wall === 0 : Math.abs(wrap(rig.yaw)) < 1.25;
   view.active = facingNorth;
   // draw the countryside only when the window is somewhere in the frame
   camera.updateMatrixWorld();
