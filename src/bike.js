@@ -6,8 +6,9 @@
 // and a rear rack; this one has had them taken off, as a mountain bike.
 //
 // Built in the bike's own frame (x forward, y up, z to the right, the chain side; y = 0 is the floor)
-// and merged into three draws: the frame (one texture with splatter and decals), every other part
-// (vertex colours) and the spokes (lines). It never moves, so the shadow map is drawn once.
+// and merged into a few draws: the frame (one texture with splatter and decals), every other fixed
+// part (vertex colours), the spokes (lines), the chain, the crank set and the two pedals. Only the
+// last three move, and only when you tap the bike: the pedals spin back one turn (see spin()).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { ROOM } from './room.js';
@@ -29,6 +30,9 @@ const DT0 = HT0.clone().addScaledVector(AX, 0.03), SS0 = onST(0.488);
 const TYRE = { r: 0.305, t: 0.027 }, RIM = 0.2795;
 const CRANK = 0.17, CRANK_ANGLE = deg(-35);
 const STEER = 0.3, LEAN = deg(8), YAW = deg(4);
+const CHAIN_PITCH = 0.0127, MID_TEETH = 38;
+// the flick of the pedals when you tap the bike: one turn back, fast then slowing, `dur` seconds
+const SPIN = { turns: 1, dur: 1.7, power: 2.4, ratio: 2, ratchet: 24 };
 
 const C = {
   yellow: '#DCEB2A', black: '#242327', rubber: '#1D1C1F', dark: '#3A393E', silver: '#C3C5C6',
@@ -188,8 +192,8 @@ export function buildBike(room) {
   const steerM = new THREE.Matrix4().makeTranslation(CROWN.x, CROWN.y, 0)
     .multiply(new THREE.Matrix4().makeRotationAxis(AX, STEER))
     .multiply(new THREE.Matrix4().makeTranslation(-CROWN.x, -CROWN.y, 0));
-  let front = false;
-  const add = (g, col) => { if (front) g.applyMatrix4(steerM); parts.push([g, col]); return g; };
+  let front = false, bucket = null; // `bucket`: where add() puts parts, if not the fixed ones
+  const add = (g, col) => { if (front) g.applyMatrix4(steerM); (bucket || parts).push([g, col]); return g; };
 
   // frame tubes, in the painted texture
   const tubes = {
@@ -317,7 +321,12 @@ export function buildBike(room) {
   for (let i = f0; i < lines.length; i++) lines[i].applyMatrix4(steerM);
   front = false; wheel(R, true);
 
-  // drivetrain: three chainrings behind a black guard ring, cranks, pedals, freewheel, derailleurs, chain
+  // drivetrain: three chainrings behind a black guard ring, cranks, pedals, freewheel, derailleurs, chain.
+  // The chainrings, spider, axle and cranks turn together about the bottom bracket, each pedal goes
+  // round with its crank and turns back to stay level, and the chain runs round with the rings (see
+  // crankTo below), so those parts are collected apart from the fixed ones.
+  const crankParts = [], pedalParts = [[], []], pedalPivot = [];
+  bucket = crankParts;
   add(toothedRing(48, 0.07, 0.003, BB.x, BB.y, 0.062), C.silver);
   add(toothedRing(38, 0.055, 0.003, BB.x, BB.y, 0.055), C.silver);
   add(toothedRing(28, 0.034, 0.003, BB.x, BB.y, 0.048), C.silver);
@@ -328,18 +337,21 @@ export function buildBike(room) {
     for (let i = 0; i < 5; i++) { const a = CRANK_ANGLE + i * deg(72); add(boxAt(0.06, 0.012, 0.005, BB.x + Math.cos(a) * 0.035, BB.y + Math.sin(a) * 0.035, 0.064, a), C.silver); } // spider
   }
   add(rod(V(BB.x, BB.y, -0.075), V(BB.x, BB.y, 0.075), 0.009, 0.009, 10), C.silver);
-  for (const s of [-1, 1]) {
+  [-1, 1].forEach((s, i) => {
     const a = s > 0 ? CRANK_ANGLE : CRANK_ANGLE + Math.PI, z = s * 0.077;
     const end = V(BB.x + Math.cos(a) * CRANK, BB.y + Math.sin(a) * CRANK, z + s * 0.006);
     add(rod(V(BB.x, BB.y, z), end, 0.011, 0.007, 10, V(0, 0, 1)), C.silver);
     add(rod(end, end.clone().add(V(0, 0, s * 0.03)), 0.005, 0.005, 8), C.silver);
-    // a black platform pedal with orange reflectors front and back
+    // a black platform pedal with orange reflectors front and back, on its own so it can stay level
+    bucket = pedalParts[i]; pedalPivot[i] = end;
     const pc = end.clone().add(V(0, 0, s * 0.06));
     for (const dx of [-0.032, 0.032]) add(boxAt(0.008, 0.022, 0.095, pc.x + dx, pc.y, pc.z), C.black);
     for (const dz of [-0.044, 0.044]) add(boxAt(0.07, 0.018, 0.008, pc.x, pc.y, pc.z + dz), C.black);
     add(boxAt(0.06, 0.008, 0.012, pc.x, pc.y, pc.z), C.black);
     for (const dx of [-0.037, 0.037]) add(boxAt(0.003, 0.01, 0.035, pc.x + dx, pc.y, pc.z), C.orange);
-  }
+    bucket = crankParts;
+  });
+  bucket = null;
   // seven-speed freewheel
   for (let i = 0; i < 7; i++) {
     const t = 28 - i * 3, r = 0.0127 / (2 * Math.sin(Math.PI / t)) + 0.002, z = 0.031 + i * 0.0048;
@@ -357,6 +369,7 @@ export function buildBike(room) {
   add(boxAt(0.05, 0.022, 0.004, fd.x + 0.025, fd.y - 0.012, 0.05, deg(-12)), C.silver);
   add(rod(V(fd.x, fd.y + 0.012, -0.017), V(fd.x, fd.y + 0.012, 0.017), 0.017, 0.017, 12), C.silver);
   // the chain, on the middle ring and a middle sprocket, wrapping round both jockey wheels
+  let chainPts;
   {
     const rc = 0.0127 / (2 * Math.sin(Math.PI / 38)), rg = 0.0127 / (2 * Math.sin(Math.PI / 19)), zc = 0.052;
     const pts = [];
@@ -365,7 +378,7 @@ export function buildBike(room) {
     for (const a of [170, 230, 290]) pts.push(V(J2.x + Math.cos(deg(a)) * 0.017, J2.y + Math.sin(deg(a)) * 0.017, zc - 0.002));
     for (const a of [-90, -45, 0, 45, 90]) pts.push(V(BB.x + Math.cos(deg(a)) * rc, BB.y + Math.sin(deg(a)) * rc, zc));
     pts.push(V((BB.x + R.x) / 2, (BB.y + rc + R.y + rg) / 2, zc - 0.003));
-    add(pipe(pts, 0.0038, 160, 4, true), C.chain);
+    chainPts = pts;
   }
 
   // cantilever brakes: two black arms per wheel, a straddle wire and its yoke
@@ -433,10 +446,63 @@ export function buildBike(room) {
     return n;
   }));
   const frame = new THREE.Mesh(frameGeo, makeInk({ color: '#ffffff', map: tex, wash: 0.88 }));
-  const rest = new THREE.Mesh(merge(parts), makeInk({ color: '#ffffff', vertexColors: true, wash: 0.82, side: THREE.DoubleSide }));
+  const partsMat = makeInk({ color: '#ffffff', vertexColors: true, wash: 0.82, side: THREE.DoubleSide });
+  const rest = new THREE.Mesh(merge(parts), partsMat);
   for (const m of [frame, rest]) { m.castShadow = true; m.receiveShadow = true; bike.add(m); }
   const spokes = new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(lines), new THREE.LineBasicMaterial({ color: '#3A3836' }));
+  spokes.raycast = () => {}; // a line is "hit" within a whole metre by default: never a tap target
   bike.add(spokes);
+
+  // the cranks (with chainrings and spider) and the two pedals, built round their own pivots
+  const crank = new THREE.Group(); crank.position.set(BB.x, BB.y, 0); bike.add(crank);
+  const around = (list, ox, oy) => {
+    const m = new THREE.Mesh(merge(list).translate(-ox, -oy, 0), partsMat);
+    m.castShadow = true; m.receiveShadow = true; return m;
+  };
+  crank.add(around(crankParts, BB.x, BB.y));
+  const pedals = pedalParts.map((list, i) => {
+    const g = new THREE.Group(); g.position.set(pedalPivot[i].x - BB.x, pedalPivot[i].y - BB.y, 0);
+    g.add(around(list, pedalPivot[i].x, pedalPivot[i].y)); crank.add(g); return g;
+  });
+  // the chain: a tube with a pattern of alternating inner and outer links that runs along it
+  const chainCurve = new THREE.CatmullRomCurve3(chainPts, true, 'centripetal');
+  const chainTex = (() => {
+    const c = document.createElement('canvas'); c.width = 64; c.height = 8;
+    const x = c.getContext('2d'); x.fillStyle = '#35353A'; x.fillRect(0, 0, 32, 8); x.fillStyle = '#9A9A9E'; x.fillRect(32, 0, 32, 8);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = THREE.RepeatWrapping; t.anisotropy = 4;
+    t.repeat.set(Math.round(chainCurve.getLength() / (2 * CHAIN_PITCH)), 1); // one tile = an inner and an outer link
+    return t;
+  })();
+  const chain = new THREE.Mesh(new THREE.TubeGeometry(chainCurve, 160, 0.0038, 4, true), makeInk({ color: '#ffffff', map: chainTex, wash: 0.8 }));
+  chain.castShadow = true; chain.receiveShadow = true; bike.add(chain);
+
+  // Pedalling backwards: the cranks turn counter-clockwise seen from the chain side, the pedals stay
+  // level, and the chain follows the middle ring (38 teeth = 19 tiles a turn) while the rear wheel
+  // stays put: the freewheel lets the sprocket run on its own, clicking.
+  const crankTo = (a) => {
+    crank.rotation.z = a;
+    for (const g of pedals) g.rotation.z = -a;
+    chainTex.offset.x = -a * (MID_TEETH / 2 / (2 * Math.PI));
+  };
+  let t0 = null;
+  /** Flick the pedals back one turn. Returns when each ratchet click falls (seconds from now), or null if already turning. */
+  function spin() {
+    if (t0 !== null) return null;
+    t0 = performance.now();
+    // the sprocket turns SPIN.ratio times for each turn of the cranks and clicks SPIN.ratchet times a turn
+    const n = Math.round(SPIN.turns * SPIN.ratio * SPIN.ratchet);
+    return Array.from({ length: n }, (_, k) => SPIN.dur * (1 - Math.pow(1 - (k + 1) / n, 1 / SPIN.power)));
+  }
+  function tick(now) {
+    if (t0 === null) return;
+    const u = Math.min(1, Math.max(0, (now - t0) / 1000 / SPIN.dur));
+    crankTo(Math.PI * 2 * SPIN.turns * (1 - Math.pow(1 - u, SPIN.power))); // quick off the mark, then friction slows it
+    if (u >= 1) { crankTo(0); t0 = null; } // a whole turn is back where it began
+  }
+  // a generous invisible target round the cranks: a tap near the pedals counts (it is never drawn)
+  const target = new THREE.Mesh(new THREE.SphereGeometry(0.25, 10, 6), new THREE.MeshBasicMaterial({ visible: false }));
+  target.position.set(BB.x, BB.y, 0.04); bike.add(target);
+  const isBike = (o) => { for (; o; o = o.parent) if (o === outer) return true; return false; };
 
   // In the corner: rear wheel by the TV cabinet, front wheel almost at the south wall beside the
   // bookshelf, chain side to the room, leaning a few degrees towards the wall onto its stand, front
@@ -444,7 +510,7 @@ export function buildBike(room) {
   outer.rotation.y = -Math.PI / 2 + YAW; // bike forward = world +z (south), chain side = world -x (into the room)
   bike.rotation.x = -LEAN;
   outer.position.set(ROOM.hx - 0.545, 0, 0.4);
-  return outer;
+  return { group: outer, spin, tick, isBike, crankTo, angle: () => crank.rotation.z };
 }
 
 /** Merge non-indexed geometries keeping position, normal and uv. */

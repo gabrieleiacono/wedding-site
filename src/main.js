@@ -58,7 +58,7 @@ const { room, anchors } = buildRoom(scene);
 const teletext = new Teletext(store);
 const tv = buildTV(room, teletext);
 const shelf = buildBookshelf(room);
-buildBike(room);
+const bike = buildBike(room);
 const shelfView = new ShelfView({ shelf: shelf.shelf, leggimi: shelf.leggimi, sound });
 const typewriter = new Typewriter(room, sound);
 const view = new Countryside(scene, sound);
@@ -379,6 +379,8 @@ function clickAt(x, y) {
   if (view.group.visible && view.pick(ray, hitRoom ? hitRoom.distance : Infinity)) return;
   if (shelfView.active) { if (!shelfView.multi) shelfView.tap(ray); return; }
   if (rig.focus) return;
+  // a tap on the bike (the pedals above all) flicks them back one turn, freewheeling
+  if (hitRoom && bike.isBike(hitRoom.object)) { const clicks = bike.spin(); if (clicks) sound.freewheel(clicks); return; }
   // otherwise: the nearest hotspot on screen within reach
   let best = null, bd = 90;
   for (const h of HOT) { if (!h.screen) continue; const d = Math.hypot(h.screen.x - x, h.screen.y - y); if (d < bd) { bd = d; best = h; } }
@@ -685,6 +687,7 @@ function drawFrame(now) {
   teletext.draw(now);
   tv.tick(now);
   typewriter.tick(now, dt);
+  bike.tick(now);
   shutter += (shutterTarget - shutter) * Math.min(1, dt * 2.2); layoutShutter();
   bookOut += (bookTarget - bookOut) * Math.min(1, dt * 6);
   shelf.leggimi.position.z = shelf.leggimiRest.z - bookOut * 0.14;
@@ -725,4 +728,4 @@ if (params.has('shelf')) setTimeout(() => {
   if (params.has('book')) setTimeout(() => shelfView.pull(shelfView.row.books[+params.get('book')] ?? shelfView.row.books[0]), 900);
 }, 300);
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
-window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView };
+window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView, bike, sound };

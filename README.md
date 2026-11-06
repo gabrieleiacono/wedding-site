@@ -7,6 +7,7 @@ Turn around the room; every piece of wedding information lives in an object.
 - **TV + remote**: teletext pages (100 index, 101 programme, 200 travel, 210 stay, 300 weather, 400 dress code, 500 RSVP, 600 live guestbook, 700 FAQ, 888 hidden). AV = the console's tennis game.
 - **Album, notebooks**: photos and five short stories
 - **Bookshelf**: 383 real books in their Italian editions. Tap a book (or the Aa hotspot) to get close to a shelf: drag along it, ▲▼ to change shelf, author chips to jump, pinch or wheel to zoom. Tap a book to take it out and read its library card. The glowing LEGGIMI book, the hi-fi playlist
+- **Bike**: a yellow Wheeler 2100 in the corner between the TV and the shelf. Tap it, the pedals above all, and the pedals spin back one turn with the clicking of a freewheel.
 - **Window**: living landscape (trains on the viaduct, donkeys and foals, rooster, swallows); pull the shutter strap
 - **Calendar**: countdown. **Phone**: FAQ.
 - `facts.html`: "Solo i fatti", a plain text version of everything.
@@ -53,10 +54,10 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/typewriter-model.js` | The detailed electronic typewriter (keys, legends, LCD, paper slot) |
 | `src/phone.js` | The Sirio-style desk phone with its keypad and coiled cord |
 | `src/lamp.js` | The desk lamp: a Caltagirone majolica baluster with a pleated linen shade that glows at the blue hour |
-| `src/bike.js` | The 1990s Wheeler 2100 Pro Line in neon yellow, between the TV and the bookshelf: frame paint (splatter and decals) drawn into one texture, every other part merged into one mesh, spokes as lines |
+| `src/bike.js` | The 1990s Wheeler 2100 Pro Line in neon yellow, between the TV and the bookshelf: frame paint (splatter and decals) drawn into one texture, every other fixed part merged into one mesh, spokes as lines; the crank set, the two pedals and the chain are their own meshes so a tap can spin them back one turn |
 | `src/geo.js` | Noise and geometry helpers shared by the landscape and the animals |
 | `src/overlays.js` | Album, notebooks, cards, calendar, credits |
-| `src/audio.js` | Synthesised sounds |
+| `src/audio.js` | Synthesised sounds (including the bicycle freewheel's ratchet) |
 | `src/store.js` | RSVP storage (Google Sheet / claude.ai / local) |
 | `src/main.js` | Lights, camera rig, hotspots, frame loop |
 
