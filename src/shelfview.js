@@ -1,5 +1,5 @@
 // Wall C close-ups: "Scaffale da vicino" (the camera squares up to one shelf; drag along it, change
-// shelf, jump to an author, pinch or wheel to zoom) and "Tira fuori il libro" (tap a book: it slides
+// shelf, jump to an author's books, pinch or wheel to zoom) and "Tira fuori il libro" (tap a book: it slides
 // out, turns so its spine reads left to right, and a library card tells you what it is).
 // Only taps and drags, no hover.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
@@ -86,12 +86,17 @@ export class ShelfView {
     const k = vis / innerHeight;
     return { x: this.tx - (sx - innerWidth / 2) * k, y: this.ty - (sy - innerHeight / 2) * k };
   }
-  /** Scroll so the first book by this author sits at the left of the screen. */
+  /** Scroll so a book by this author sits at the left of the screen. The books are shuffled, so
+   *  tapping the same author again moves on to their next book (top shelf first, left to right). */
   jumpTo(author) {
-    for (let ri = 0; ri < this.rows.length; ri++) {
-      const rec = this.rows[ri].books.find((r) => this.authorKey(r.b) === author);
-      if (rec) { if (this.pulled) this.putBack(true); this.tvis = this.baseVis(); this.setRow(ri, rec.pos.x - this.halfW(this.tvis) * 0.85);  return; }
-    }
+    const all = this.rows.flatMap((R, ri) => R.books.map((rec) => ({ ri, rec })));
+    const mine = all.filter((o) => this.authorKey(o.rec.b) === author);
+    if (!mine.length) return;
+    const prev = this.lastJump?.author === author ? mine.findIndex((o) => o.rec === this.lastJump.rec) : -1;
+    const { ri, rec } = mine[(prev + 1) % mine.length];
+    this.lastJump = { author, rec };
+    if (this.pulled) this.putBack(true);
+    this.tvis = this.baseVis(); this.setRow(ri, rec.pos.x - this.halfW(this.tvis) * 0.85);
   }
 
   // --- input ---------------------------------------------------------------------------------------

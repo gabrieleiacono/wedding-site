@@ -8,9 +8,14 @@ import { M, box, cyl, ROOM } from './room.js';
 import { BOOKS } from './books-data.js';
 import { SpineAtlas, bookUV, rng, hashStr, loadSpineFonts, applySeries } from './spines.js';
 
-// Authors in shelf order: kept together, each in publication order; then the odds and ends (section 'varie').
-const AUTHOR_ORDER = ['Calvino', 'Brancati', 'Jansson', 'Le Guin', 'Dick', 'Clarke', 'Atwood', 'Roth', 'Auster', 'DeLillo', 'Wallace', 'McCarthy', 'McEwan', 'Haruf'];
-const surname = (a = '') => AUTHOR_ORDER.find((s) => a.toLowerCase().includes(s.toLowerCase())) ?? a.split(' ').pop();
+// The books stand in a shuffled order, not by author: the same order for every visitor, picked by
+// this seed (change it for another arrangement).
+const SHUFFLE_SEED = 20270529;
+function shuffle(a, seed) {
+  const r = rng(seed);
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
 
 function normalise(raw, i) {
   const h = (raw.height_mm || 197), t = Math.max(6, raw.thickness_mm || 18);
@@ -20,7 +25,7 @@ function normalise(raw, i) {
     ...raw, seed, h, t, d: raw.width_mm || Math.round(h * 0.64),
     binding: raw.binding || 'paperback',
     age: 0.2 + r() * 0.8, read: r(),
-    key: raw.section ? 'Varie' : surname(raw.author), year: raw.first_published || raw.year || 0, idx: i,
+    year: raw.first_published || raw.year || 0, idx: i,
   });
 }
 
@@ -40,15 +45,8 @@ export function buildBookshelf(room) {
   const mat = (c) => { if (!mats.has(c)) mats.set(c, makeInk({ color: c, wash: 0.72 })); return mats.get(c); };
   const anchors = { reserved: [] };
 
-  // --- the books, sorted by author and year --------------------------------------------------
-  const books = BOOKS.map(normalise).filter((b) => b.h < clear * 1000 - 8);
-  const rank = (b) => { if (b.section) return 100; const k = AUTHOR_ORDER.indexOf(b.key); return k < 0 ? 99 : k; };
-  // Within an author: by first publication where the research gives it for every book, otherwise in
-  // the research's own (chronological) order; collected editions such as the Meridiani close the run.
-  // The odds and ends keep the order of the owners' list.
-  const dated = new Set(books.map((b) => b.key).filter((k) => books.every((b) => b.key !== k || b.first_published)));
-  const when = (b) => (dated.has(b.key) && !b.section ? b.first_published : b.idx);
-  books.sort((a, b) => rank(a) - rank(b) || a.key.localeCompare(b.key) || !!a.house - !!b.house || when(a) - when(b) || a.title.localeCompare(b.title));
+  // --- the books, shuffled -------------------------------------------------------------------
+  const books = shuffle(BOOKS.map(normalise).filter((b) => b.h < clear * 1000 - 8), SHUFFLE_SEED);
   const leggimiBook = {
     title: 'LEGGIMI', author: '', publisher: '', seed: 777, h: 270, t: 45, d: 210, binding: 'hardcover', age: 0.1, read: 0,
     spine: {
@@ -141,7 +139,6 @@ export function buildBookshelf(room) {
         const n = Math.min(4 + Math.floor(r() * 3), run.length - at);
         const sw = Math.max(...run.slice(at, at + n).map((b) => b.h)) / 1000 + 0.01 - run.slice(at, at + n).reduce((s, b) => s + b.t / 1000, 0);
         if (sw > spare) break;
-        if (new Set(run.slice(at, at + n).map((b) => b.section)).size > 1) { at += n; continue; }
         stacks.set(at, n); spare -= sw;
         at += n + every;
       }
@@ -159,13 +156,6 @@ export function buildBookshelf(room) {
           continue;
         }
         const b = run[i];
-        if (lastBook && b.section !== lastBook.section) {
-          // a bookend between the authors and the odds and ends
-          x -= 0.004;
-          box(0.0025, 0.15, 0.13, M.darkgrey, x - 0.0015, y + 0.075, spineZ + 0.075, g);
-          box(0.12, 0.0015, 0.13, M.darkgrey, x + 0.06, y + 0.001, spineZ + 0.075, g);
-          x -= 0.008;
-        }
         x -= b.t / 1000; lastStanding = standBook(b, x, y, (r() - 0.5) * 0.006); lastBook = b; x -= gapOf(b);
       }
       const end = xs - sg.cap;
