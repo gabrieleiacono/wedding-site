@@ -60,8 +60,8 @@ export function buildBookshelf(room) {
       ],
     },
   };
-  const friend = friendBook(); // a friend's novel, standing just right of LEGGIMI
-  const atlas = new SpineAtlas([...books, friend], 4096);
+  const friend = friendBook(); // a friend's novel, standing face-out just right of LEGGIMI
+  const atlas = new SpineAtlas(books, 4096);
   const lgAtlas = new SpineAtlas([leggimiBook], 1024);
   const fontsReady = loadSpineFonts().then(() => { atlas.draw(); lgAtlas.draw(); whenCinzel(() => atlas.draw()); });
 
@@ -75,7 +75,8 @@ export function buildBookshelf(room) {
     [[['reserve', 'cd', 0]], [['reserve', 'vhs', 0]]],
     [[['reserve', 'vinili', 0]], [['reserve', 'vinili', 0]]],
   ];
-  const friendW = friend.t / 1000 + 0.009;
+  const friendW = friend.d / 1000 + 0.03;
+  let friendRec = null;
   const bayEdges = (bay) => { const lo = x0 - W / 2 + 0.015 + bay * (W / 2) + 0.004; return [lo, lo + W / 2 - 0.038]; };
   const rowY = (row) => 0.04 + row * inner + board / 2;
 
@@ -198,8 +199,25 @@ export function buildBookshelf(room) {
       anchors.leggimiLight = light;
       cursor.set(id, xs - 0.06);
     } else if (kind === 'friend') {
-      // upright, square to the shelf, a finger's width from LEGGIMI
-      standBook(friend, xs - 0.005 - friend.t / 1000, y);
+      // face-out, as a bookshop shows a new book: upright, its front cover to the room, leaning back a
+      // touch on a little black stand. It is its own model (cover art and all), not part of the row's meshes.
+      const fd = friend.d / 1000, ft = friend.t / 1000, fh = friend.h / 1000, lean = 0.06;
+      const m = buildFriendBook(friend);
+      const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), -Math.PI / 2); // the front (-x) to the room (-z)
+      q.premultiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), lean)); // the top a little back
+      const zf = spineZ + 0.035, base = 0.003; // where the foot of the cover rests, behind the stand's lip
+      m.quaternion.copy(q);
+      m.position.set(xs - 0.015 - fd / 2, y + base + fh / 2 * Math.cos(lean) + ft / 2 * Math.sin(lean), zf + fh / 2 * Math.sin(lean) + ft / 2 * Math.cos(lean));
+      m.traverse((o) => { if (o.isMesh) { o.castShadow = o.receiveShadow = true; } });
+      g.add(m);
+      const sx = m.position.x, sw = fd * 0.62, stand = M.black;
+      box(sw, base, 0.07, stand, sx, y + base / 2, zf + 0.03, g);                  // the foot
+      box(sw, 0.006, 0.003, stand, sx, y + base + 0.003, zf - 0.0025, g);        // the lip in front of the cover, below the type
+      // the back rest, from the back of the foot up to the back cover
+      const legLow = zf + 0.065, legHigh = zf + ft + 0.14 * Math.sin(lean) + 0.001;
+      const leg = box(0.03, Math.hypot(0.14, legLow - legHigh), 0.003, stand, sx, y + base + 0.07, (legLow + legHigh) / 2, g);
+      leg.rotation.x = -Math.atan2(legLow - legHigh, 0.14);
+      friendRec = { b: friend, row: sg.row, pos: m.position.clone(), quat: m.quaternion.clone(), flat: false, standalone: m, body: [0, 0], spine: [0, 0] };
       cursor.set(id, xs - friendW);
     }
   }
@@ -284,8 +302,12 @@ export function buildBookshelf(room) {
       return mesh;
     };
     // viewer's left to right is world +x to -x; piles and the books lying on top go by their centre
+    if (friendRec && friendRec.row === row) {
+      friendRec.i = recs.length; recs.push(friendRec); list.push(friendRec);
+      friendRec.standalone.traverse((o) => { if (o.isMesh) { o.userData.rec = friendRec; meshes.push(o); } });
+    }
     list.sort((p, q) => q.pos.x - p.pos.x || p.pos.y - q.pos.y);
-    const ext = (r) => (r.flat ? r.b.h : r.b.t) / 2000;
+    const ext = (r) => (r.standalone ? r.b.d : r.flat ? r.b.h : r.b.t) / 2000;
     rows.push({ row, y: rowY(row), books: list, body: mk(body), spines: mk(sp), local: Float32Array.from(local), roomUV: Float32Array.from(sp.uv),
       x0: Math.min(...list.map((r) => r.pos.x - ext(r))), x1: Math.max(...list.map((r) => r.pos.x + ext(r))),
       top: Math.max(...list.map((r) => r.pos.y + (r.flat ? r.b.t : r.b.h) / 2000)) });
@@ -298,19 +320,19 @@ export function buildBookshelf(room) {
     /** Swap a shelf's spines to a texture drawn at up to 12 px/mm (about 5× the room's). */
     sharpen(R) {
       if (sharp.has(R.row)) { const a = sharp.get(R.row); sharp.delete(R.row); sharp.set(R.row, a); return; }
-      const a = new SpineAtlas(R.books.map((r) => r.b), 4096, { spinesOnly: true, height: coarse ? 2048 : 4096, maxScale: 12, secondary: true, hatch: 0.07, wash: 0.97, deferDraw: true });
+      const merged = R.books.filter((r) => !r.standalone); // the face-out book has its own textures
+      const a = new SpineAtlas(merged.map((r) => r.b), 4096, { spinesOnly: true, height: coarse ? 2048 : 4096, maxScale: 12, secondary: true, hatch: 0.07, wash: 0.97, deferDraw: true });
       fontsReady.then(() => {
         if (!sharp.has(R.row)) return;
         a.draw();
         const uv = new Float32Array(R.local.length);
         let k = 0;
-        for (const rec of R.books.slice().sort((p, q) => p.spine[0] - q.spine[0])) {
+        for (const rec of merged.slice().sort((p, q) => p.spine[0] - q.spine[0])) {
           const [u0, v0, u1, v1] = a.uv.get(rec.b).spine;
           for (let v = rec.spine[0]; v < rec.spine[0] + 6; v++) { k = v * 2; uv[k] = u0 + R.local[k] * (u1 - u0); uv[k + 1] = v0 + R.local[k + 1] * (v1 - v0); }
         }
         R.spines.geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
         R.spines.material = a.mat;
-        if (R.books.some((r) => r.b.friend)) whenCinzel(() => { if (sharp.get(R.row) === a) a.draw(); });
       });
       sharp.set(R.row, a);
       while (sharp.size > 2) {
@@ -322,6 +344,7 @@ export function buildBookshelf(room) {
     },
     /** Hide a book on the shelf (it has been taken out) or put it back. */
     setOnShelf(rec, on) {
+      if (rec.standalone) { rec.standalone.visible = on; return; }
       const R = rows.find((x) => x.row === rec.row);
       for (const [mesh, [v0, n]] of [[R.body, rec.body], [R.spines, rec.spine]]) {
         const p = mesh.geometry.attributes.position, rest = mesh.userData.restPos;
@@ -342,7 +365,7 @@ export function buildBookshelf(room) {
     },
     /** Fetch what a close-up will need before it is asked for (the friend's book's cover picture). */
     prefetch() { fontsReady.then(preloadFriendCover); },
-    bookAt(hit) { const o = hit?.object?.userData?.owner; return o ? recs[o[hit.faceIndex]] : null; },
+    bookAt(hit) { if (hit?.object?.userData?.rec) return hit.object.userData.rec; const o = hit?.object?.userData?.owner; return o ? recs[o[hit.faceIndex]] : null; },
   };
   anchors.bookCount = placed.length;
   return anchors;

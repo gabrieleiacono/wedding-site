@@ -1,7 +1,7 @@
-// "La causa dei vivi" by Anna Gabriella Rusconi (Cronache Ribelli, 2026): a friend's novel, standing on
-// the shelf just right of LEGGIMI. On the shelf it is a box like its neighbours, its spine drawn from
-// the elements below (as on the real book: CRONACHE RIBELLI at the head, then title and author in gold
-// Cinzel on matte black). Taken out, it is a proper paperback with flaps: two cover boards and a spine,
+// "La causa dei vivi" by Anna Gabriella Rusconi (Cronache Ribelli, 2026): a friend's novel, standing
+// face-out on the shelf just right of LEGGIMI, its cover to the room. Its spine is drawn from the elements
+// below (as on the real book: CRONACHE RIBELLI at the head, then title and author in gold Cinzel on matte
+// black). On the shelf and in the hand it is the same model, a proper paperback with flaps: two cover boards and a spine,
 // the red flaps folded inside them, a white page block with its edges, the real front cover and the six
 // gold lines of the back, and it turns to face you (tap it to turn it over).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
