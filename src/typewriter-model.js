@@ -192,7 +192,7 @@ function housingDecal(W, H, rulerY) {
       if (i % 10 === 0) x.fillText(String(Math.abs(i)), px, rulerY + 15);
     }
     // badge: SMITH CORONA, white on black, in a bevelled frame
-    const bx = 222, by = H - 140, bw = 330, bh = 92;
+    const bx = 222, by = H - 114, bw = 330, bh = 92;
     x.fillStyle = 'rgba(90,86,78,0.35)'; roundRect(x, bx - 8, by - 8, bw + 16, bh + 16, 10); x.fill();
     x.fillStyle = '#222226'; roundRect(x, bx, by, bw, bh, 6); x.fill();
     // the logo: a square of white rules, horizontal at top and bottom, vertical in the middle
@@ -208,7 +208,7 @@ function housingDecal(W, H, rulerY) {
     for (const [t, ty] of [['SMITH', -4], ['CORONA', 30]]) { x.fillText(t, 0, ty); x.strokeText(t, 0, ty); }
     x.restore();
     // model lettering, right, level with the badge: XD in grey, 4950 outlined in red, then the two descriptive lines
-    const mx = 1478, base = H - 38;
+    const mx = 1478, base = H - 12;
     x.save(); x.textBaseline = 'alphabetic'; x.textAlign = 'left';
     x.font = `italic 600 54px ${SANS}`; x.fillStyle = '#5C5A57'; x.fillText('XD', mx, base - 72);
     const xw = x.measureText('XD ').width;
