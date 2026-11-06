@@ -144,9 +144,12 @@ export function buildTV(room, teletext) {
       const d = new Date();
       const h = d.getHours() % 12 + d.getMinutes() / 60, m = d.getMinutes() + d.getSeconds() / 60;
       hourHand.rotation.x = -h / 12 * Math.PI * 2; minHand.rotation.x = -m / 60 * Math.PI * 2;
+      const on = Math.floor(now / 600) % 2;
+      if (on === this.vcrOn) return; // the VCR's 12:00 only changes when it blinks
+      this.vcrOn = on;
       const c = vcrCanvas.getContext('2d');
       c.fillStyle = '#060806'; c.fillRect(0, 0, 128, 48);
-      if (Math.floor(now / 600) % 2) { c.fillStyle = '#5CF27A'; c.font = '700 34px "IBM Plex Mono", monospace'; c.fillText('12:00', 10, 37); }
+      if (on) { c.fillStyle = '#5CF27A'; c.font = '700 34px "IBM Plex Mono", monospace'; c.fillText('12:00', 10, 37); }
       vcrTex.needsUpdate = true;
       led.material.emissiveIntensity = 1.2;
     },

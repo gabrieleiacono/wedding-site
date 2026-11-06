@@ -188,12 +188,20 @@ export class Typewriter {
     this.col = Math.min(COLS, this.currentText().length);
   }
   drawLCD(now) {
-    const c = this.lcdCanvas.getContext('2d');
     const flash = this.flash && now - this.flash < 400;
+    const text = this.lcdText(now);
+    // redraw (and re-upload) the LCD only when what it shows changes: the cursor blinks twice a second
+    if (text === this.lcdShown && flash === this.lcdFlash) return;
+    this.lcdShown = text; this.lcdFlash = flash;
+    const c = this.lcdCanvas.getContext('2d');
     c.fillStyle = flash ? '#CCDBB4' : '#A6B793'; c.fillRect(0, 0, 1024, 176);
     c.fillStyle = 'rgba(31,42,30,0.08)';
     for (let i = 0; i < 26; i++) c.fillRect(10 + i * 38.8, 40, 35, 96);
     c.fillStyle = '#1F2A1E'; c.font = '700 64px "IBM Plex Mono", monospace'; c.textBaseline = 'middle';
+    c.fillText(text, 12, 90);
+    this.lcdTex.needsUpdate = true;
+  }
+  lcdText(now) {
     let text;
     if (this.finished) text = this.answers.coming ? ' GRAZIE! STAMPA IN CORSO' : ' GRAZIE LO STESSO.';
     else {
@@ -205,8 +213,7 @@ export class Typewriter {
       text = `${display}/${total} ${st.q} ${this.value.toUpperCase()}${cursor}`;
       if (text.length > 26) text = text.slice(text.length - 26);
     }
-    c.fillText(text, 12, 90);
-    this.lcdTex.needsUpdate = true;
+    return text;
   }
   updatePaper() {
     const p = this.paper;

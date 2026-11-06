@@ -28,9 +28,16 @@ const canvas = $('#scene');
 let renderer;
 try { renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', preserveDrawingBuffer: params.has('shot') }); }
 catch (e) { console.warn('WebGL (high-performance) refused, retrying', e); renderer = new THREE.WebGLRenderer({ canvas, antialias: false, preserveDrawingBuffer: params.has('shot') }); }
-renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+// Pixel density: the screen's own (at most 2) while the frame keeps up; see adaptDensity() below.
+const MAX_DPR = Math.min(2, window.devicePixelRatio || 1);
+renderer.setPixelRatio(MAX_DPR);
 renderer.setSize(innerWidth, innerHeight);
 renderer.shadowMap.enabled = true;
+// The sun's shadow map is redrawn only when something that casts a shadow moves (see shadowsMoved()),
+// not on every render: each frame renders the scene twice (colour, then normals for the outlines),
+// and three.js would otherwise redraw the shadow map for both.
+renderer.shadowMap.autoUpdate = false;
+renderer.shadowMap.needsUpdate = true;
 renderer.localClippingEnabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 const post = new InkPost(renderer);
@@ -38,6 +45,7 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(60, innerWidth / innerHeight, 0.05, 2000);
 camera.layers.enable(1);
 
+scene.matrixWorldAutoUpdate = false; // updated once per frame in drawFrame(), not once per render pass
 const frustum = new THREE.Frustum(), projView = new THREE.Matrix4();
 const WINDOW_BOX = new THREE.Box3(new THREE.Vector3(WINDOW.x0, WINDOW.y0, -ROOM.hz - 0.2), new THREE.Vector3(WINDOW.x1, WINDOW.y1, -ROOM.hz + 0.05));
 const sound = new Sound();
@@ -488,7 +496,58 @@ const tmp = new THREE.Vector3(), eyePos = new THREE.Vector3();
 // always asked for, and the error is reported once.
 function frame(now) {
   requestAnimationFrame(frame);
+  adaptDensity(now);
   try { drawFrame(now); } catch (e) { if (!frame.failed) { frame.failed = true; console.error('frame failed', e); } }
+}
+// Dynamic resolution: when frames come slower than ~48 a second for a while, draw fewer pixels
+// (down to one per CSS pixel); when they keep up at full speed, try more again, up to the screen's own.
+// A step down that doesn't make frames faster (a browser capping at 30 fps in power saving, or a
+// slow CPU rather than GPU) is taken back, so a screen never loses sharpness for nothing.
+const dens = { dpr: MAX_DPR, ceil: Infinity, t0: 0, n: 0, sum: 0, fast: 0, trial: null, stuck: false, warm: performance.now() + 2500 };
+function setDensity(v) { dens.dpr = v; renderer.setPixelRatio(v); resize(); }
+function adaptDensity(now) {
+  const ms = now - (dens.last ?? now); dens.last = now;
+  if (dens.stuck || MAX_DPR <= 1 || params.has('dpr')) return;
+  // skip the first seconds (shaders compiling) and any hitch (a tab switch): start the window again
+  if (now < dens.warm || document.hidden || ms > 1000) { dens.t0 = now; dens.n = dens.sum = 0; return; }
+  dens.n++; dens.sum += ms;
+  if (now - dens.t0 < 1200 || dens.n < 8) return;
+  const avg = dens.sum / dens.n; dens.t0 = now; dens.n = dens.sum = 0;
+  if (dens.trial) { // judge the last step down: keep it only if it bought real speed
+    const t = dens.trial; dens.trial = null;
+    if (avg > t.avg * 0.88) { setDensity(t.from); dens.stuck = true; return; }
+  }
+  if (avg > 1000 / 48 && dens.dpr > 1) {
+    dens.trial = { from: dens.dpr, avg }; dens.ceil = dens.dpr; dens.fast = 0;
+    setDensity(Math.max(1, dens.dpr - 0.25));
+  } else if (avg < 1000 / 57) {
+    // keeping up: after a good stretch, one step sharper; back up to a level that was once too slow
+    // only after a much longer one, so a borderline device doesn't keep flipping between two
+    dens.fast++;
+    const next = Math.min(MAX_DPR, dens.dpr + 0.25);
+    if (next > dens.dpr && dens.fast >= (next >= dens.ceil ? 20 : 5)) { dens.fast = 0; if (next >= dens.ceil) dens.ceil = Infinity; setDensity(next); }
+  } else dens.fast = 0;
+}
+if (params.has('dpr')) { renderer.setPixelRatio(+params.get('dpr') || 1); resize(); } // ?dpr=1 fixes the density (screenshots, profiling)
+// Has anything that casts a shadow moved, appeared or disappeared since the shadow map was drawn?
+// (the shutter, the LEGGIMI book, books taken off the shelf, typewriter keys, clock hands, the sun)
+let shadowSig = new Float32Array(0), shadowN = 0;
+const shadowSnap = [];
+function shadowsMoved() {
+  shadowSnap.length = 0;
+  scene.traverseVisible((o) => {
+    if (!o.castShadow || !(o.isMesh || o.isLine || o.isPoints)) return;
+    shadowSnap.push(o.id, o.geometry.attributes.position?.version ?? 0, o.geometry.drawRange.count, ...o.matrixWorld.elements);
+    if (o.isInstancedMesh) shadowSnap.push(o.count, o.instanceMatrix.version);
+  });
+  shadowSnap.push(...sun.position.toArray(), ...sun.target.position.toArray(), sun.intensity > 0 ? 1 : 0);
+  let moved = shadowSnap.length !== shadowN;
+  if (!moved) for (let i = 0; i < shadowN; i++) if (shadowSig[i] !== Math.fround(shadowSnap[i])) { moved = true; break; }
+  if (moved) {
+    if (shadowSig.length < shadowSnap.length) shadowSig = new Float32Array(shadowSnap.length * 2);
+    shadowSig.set(shadowSnap); shadowN = shadowSnap.length;
+  }
+  return moved;
 }
 function drawFrame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
@@ -540,6 +599,8 @@ function drawFrame(now) {
   if (Math.floor(now / 60000) !== drawFrame.min) { drawFrame.min = Math.floor(now / 60000); cal.draw(); }
 
   post.mat.uniforms.uTime.value = now / 1000;
+  scene.updateMatrixWorld();
+  if (shadowsMoved()) renderer.shadowMap.needsUpdate = true;
   post.render(scene, camera);
   placeHotspots();
 }
@@ -570,4 +631,4 @@ if (params.has('shelf')) setTimeout(() => {
   if (params.has('book')) setTimeout(() => shelfView.pull(shelfView.row.books[+params.get('book')] ?? shelfView.row.books[0]), 900);
 }, 300);
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
-window.__scene = { scene, camera, rig, teletext, typewriter, view, HOT, activate, shelfView };
+window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView };
