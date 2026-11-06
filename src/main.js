@@ -99,9 +99,45 @@ const WALLS = [
   { yaw: 0, name: 'A · La scrivania' }, { yaw: -Math.PI / 2, name: 'B · Il televisore' },
   { yaw: Math.PI, name: 'C · La libreria' }, { yaw: Math.PI / 2, name: 'D · La porta' },
 ];
-const rig = { yaw: 0, pitch: -0.15, vyaw: 0, targetYaw: null, home: null, dragging: false, focus: null, t: 0, from: null,
+// yaw/pitch is where you are looking; yawT/pitchT is where the drag (or a flick, or the compass) is
+// taking you, and the view follows it a moment behind (see LOOK.ease).
+const rig = { yaw: 0, pitch: -0.15, yawT: 0, pitchT: -0.15, vyaw: 0, vpitch: 0, feel: 'mouse', targetYaw: null, home: null, dragging: false, focus: null, t: 0, from: null,
   lens: { fov: 60, cx: innerWidth / 2, cy: innerHeight / 2 }, peek: { yaw: 0, pitch: 0 }, peekS: { yaw: 0, pitch: 0 }, peeking: false, kbBottom: innerHeight };
 const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
+const deg = THREE.MathUtils.degToRad;
+// How looking round feels.
+const LOOK = {
+  // dragging down looks down, as if tipping the desk towards you; ?look=grab instead moves the room
+  // with your finger both ways (drag up to look down)
+  vsign: params.get('look') === 'grab' ? 1 : -1,
+  // how far the view turns per pixel dragged, as a multiple of how far the room under the pointer
+  // moves: at 1 it would stick to your finger. Faster with a mouse, so a sweep or two turns you round.
+  speed: { mouse: 2.0, touch: 1.5 },
+  tilt: 0.8, // up and down a little slower than round, so leaning over the desk is a deliberate move
+  // seconds the view takes to catch up with the drag: enough to give it weight, too little to feel late
+  ease: { mouse: 0.09, touch: 0.055 },
+  down: () => deg(innerWidth < 700 ? -46 : -50), up: deg(15),
+  give: 0.07, // you can pull this far (radians) past a limit, against growing resistance, and it springs back
+  coast: 4, // a flick's speed fades at this rate, so it carries on for about speed / 4
+};
+// Looking down is leaning over: from about 10° down you rise from the chair and lean in, so at the
+// bottom of the tilt you see the desk from above (eye 30 cm higher, 20 cm further in).
+const LEAN = { from: deg(10), to: deg(50), rise: 0.3, reach: 0.2 };
+function leanIn(pos, yaw, pitch) {
+  const s = THREE.MathUtils.smoothstep(-pitch, LEAN.from, LEAN.to);
+  pos.y += LEAN.rise * s;
+  pos.x -= Math.sin(yaw) * LEAN.reach * s; pos.z -= Math.cos(yaw) * LEAN.reach * s;
+  return pos;
+}
+// past a limit, a drag meets growing resistance: it gives a little, never more than LOOK.give
+function withGive(x) {
+  const lo = LOOK.down(), hi = LOOK.up, g = LOOK.give;
+  if (x < lo) return lo - g * (1 - Math.exp((x - lo) / g));
+  if (x > hi) return hi + g * (1 - Math.exp((hi - x) / g));
+  return x;
+}
+// radians per CSS pixel at which the room would stay under the pointer
+const stickyRadPerPx = () => 2 * Math.atan(Math.tan(deg(rig.baseFov) / 2) * innerWidth / innerHeight) / innerWidth;
 const nearestWall = () => WALLS.reduce((b, w) => (Math.abs(wrap(rig.yaw - w.yaw)) < Math.abs(wrap(rig.yaw - b.yaw)) ? w : b));
 // The eye walks an oval track round the room. Each wall has a stop on the track, centred on the
 // things you can touch there; turning carries you along the track from one stop to the next.
@@ -132,7 +168,9 @@ canvas.addEventListener('pointerdown', (e) => {
   down = { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: 0, trail: [] };
   if (shelfView.active) { shelfView.pointerDown(e); canvas.setPointerCapture(e.pointerId); return; }
   if (rig.focus) { if (rig.focus.peek) { rig.peeking = true; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId); } return; }
-  rig.dragging = true; rig.targetYaw = null; rig.vyaw = 0; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId);
+  rig.dragging = true; rig.targetYaw = null; rig.vyaw = rig.vpitch = 0; canvas.classList.add('dragging'); canvas.setPointerCapture(e.pointerId);
+  rig.feel = e.pointerType === 'mouse' ? 'mouse' : 'touch';
+  down.pitch = rig.pitchT; // the pitch the drag asks for, before any give at the limits
 });
 canvas.addEventListener('pointermove', (e) => {
   if (shelfView.active) shelfView.pointerMove(e);
@@ -140,14 +178,15 @@ canvas.addEventListener('pointermove', (e) => {
   // deltas from the pointer's own position (movementX is 0 for touch in some browsers)
   const dx = e.clientX - down.lx, dy = e.clientY - down.ly; down.lx = e.clientX; down.ly = e.clientY;
   down.moved = Math.max(down.moved + Math.abs(dx) + Math.abs(dy), Math.hypot(e.clientX - down.x, e.clientY - down.y));
-  if (rig.peeking) { peekBy(dx * 0.004, dy * 0.004); return; }
+  if (rig.peeking) { peekBy(dx * 0.004, LOOK.vsign * dy * 0.004); return; }
   if (!rig.dragging) return;
-  const k = 0.0045 * (60 / camera.fov) ** -1;
-  rig.yaw += dx * k;
+  const k = LOOK.speed[rig.feel] * stickyRadPerPx();
+  rig.yawT += dx * k;
+  down.pitch += LOOK.vsign * dy * k * LOOK.tilt;
+  rig.pitchT = withGive(down.pitch);
   // the last tenth of a second of the drag, to know how fast you were turning when you let go
-  const now = performance.now(); down.trail.push({ t: now, yaw: rig.yaw });
+  const now = performance.now(); down.trail.push({ t: now, yaw: rig.yawT, pitch: rig.pitchT });
   while (down.trail.length > 2 && now - down.trail[0].t > 100) down.trail.shift();
-  rig.pitch = THREE.MathUtils.clamp(rig.pitch + dy * k, THREE.MathUtils.degToRad(-25), THREE.MathUtils.degToRad(15));
   $('#hint').style.opacity = 0;
 });
 canvas.addEventListener('pointerup', (e) => {
@@ -155,13 +194,15 @@ canvas.addEventListener('pointerup', (e) => {
   if (rig.dragging || rig.peeking) { rig.dragging = rig.peeking = false; canvas.classList.remove('dragging'); }
   if (down && down.moved < 8) clickAt(e.clientX, e.clientY);
   else if (!rig.focus && down) {
-    // let go mid-turn and the room keeps turning a little, then settles wherever it is: no snapping to a wall
+    // let go mid-turn and the room keeps turning, slowing down, then settles wherever it is: no snapping to a wall
     const tr = down.trail, a = tr[0], b = tr[tr.length - 1], now = performance.now();
-    rig.vyaw = a && b !== a && now - b.t < 60 ? THREE.MathUtils.clamp(wrap(b.yaw - a.yaw) / ((b.t - a.t) / 1000), -4, 4) : 0;
+    const moving = a && b !== a && now - b.t < 60, s = moving ? (b.t - a.t) / 1000 : 1;
+    rig.vyaw = moving ? THREE.MathUtils.clamp(wrap(b.yaw - a.yaw) / s, -5, 5) : 0;
+    rig.vpitch = moving ? THREE.MathUtils.clamp((b.pitch - a.pitch) / s, -3, 3) : 0;
   }
   down = null;
 });
-canvas.addEventListener('pointercancel', (e) => { if (shelfView.active) shelfView.pointerUp(e); down = null; rig.dragging = rig.peeking = false; rig.vyaw = 0; canvas.classList.remove('dragging'); });
+canvas.addEventListener('pointercancel', (e) => { if (shelfView.active) shelfView.pointerUp(e); down = null; rig.dragging = rig.peeking = false; rig.vyaw = rig.vpitch = 0; canvas.classList.remove('dragging'); });
 // at the window you can look around a little (drag, or the arrow keys), but not turn your back on it
 function peekBy(dyaw, dpitch) {
   rig.peek.yaw = THREE.MathUtils.clamp(rig.peek.yaw + dyaw, -0.9, 0.9);
@@ -297,8 +338,8 @@ function activate(h) {
 }
 function focus(h) {
   // remember where you were standing and looking, so Back brings you there and not to a preset spot
-  if (!rig.focus) rig.home = { yaw: rig.yaw, pitch: rig.pitch };
-  rig.targetYaw = null; rig.vyaw = 0;
+  if (!rig.focus) rig.home = { yaw: rig.yawT, pitch: THREE.MathUtils.clamp(rig.pitchT, LOOK.down(), LOOK.up) };
+  rig.targetYaw = null; rig.vyaw = rig.vpitch = 0;
   rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), ...rig.lens };
   rig.focus = h; rig.t = 0;
   rig.peek.yaw = rig.peek.pitch = rig.peekS.yaw = rig.peekS.pitch = 0;
@@ -313,9 +354,10 @@ function unfocus(quick) {
   // back to where you were before the close-up (or, if there's no record, to where the close-up was looking)
   if (rig.home) { rig.yaw = rig.home.yaw; rig.pitch = rig.home.pitch; } else {
     const d = camera.getWorldDirection(new THREE.Vector3());
-    rig.yaw = Math.atan2(-d.x, -d.z); rig.pitch = THREE.MathUtils.clamp(Math.asin(d.y), THREE.MathUtils.degToRad(-25), THREE.MathUtils.degToRad(15));
+    rig.yaw = Math.atan2(-d.x, -d.z); rig.pitch = THREE.MathUtils.clamp(Math.asin(d.y), LOOK.down(), LOOK.up);
   }
-  rig.home = null; rig.targetYaw = null; rig.vyaw = 0;
+  rig.yawT = rig.yaw; rig.pitchT = rig.pitch;
+  rig.home = null; rig.targetYaw = null; rig.vyaw = rig.vpitch = 0;
   rig.focus = null; rig.t = quick ? 1 : 0; rig.peeking = false;
   document.body.classList.remove('focused');
   $('#back').hidden = true; $('#help').hidden = true;
@@ -521,7 +563,9 @@ window.addEventListener('resize', resize);
 resize();
 
 // deep links for testing / screenshots: ?wall=1 ?focus=typewriter
-if (params.has('wall')) rig.yaw = WALLS[+params.get('wall')]?.yaw ?? 0;
+if (params.has('wall')) rig.yaw = rig.yawT = WALLS[+params.get('wall')]?.yaw ?? 0;
+// ?pitch=-40 starts looking that many degrees up or down (screenshots of the lean)
+if (params.has('pitch')) rig.pitch = rig.pitchT = withGive(deg(+params.get('pitch')));
 
 // --- frame loop -------------------------------------------------------------------------------
 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
@@ -588,20 +632,31 @@ function drawFrame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   // free look: a turn you let go of coasts to a stop on its own; only the compass arrows aim at a wall
   if (!rig.dragging && rig.targetYaw !== null) {
-    const d = wrap(rig.targetYaw - rig.yaw);
-    rig.yaw += d * Math.min(1, dt * 3.2); // unhurried, so the walk round the room reads
-    if (Math.abs(d) < 0.001) { rig.yaw = rig.targetYaw; rig.targetYaw = null; }
+    const d = wrap(rig.targetYaw - rig.yawT);
+    rig.yawT += d * Math.min(1, dt * 3.2); // unhurried, so the walk round the room reads
+    if (Math.abs(d) < 0.001) { rig.yawT = rig.targetYaw; rig.targetYaw = null; }
   } else if (!rig.dragging && rig.vyaw) {
-    rig.yaw += rig.vyaw * dt;
-    rig.vyaw *= Math.exp(-dt * 7); // a flick carries on for about a seventh of its speed: never more than ~30°
+    rig.yawT += rig.vyaw * dt;
+    rig.vyaw *= Math.exp(-dt * LOOK.coast); // a flick carries on for about speed / 4: up to ~70°
     if (Math.abs(rig.vyaw) < 0.02) rig.vyaw = 0;
   }
-  rig.yaw = wrap(rig.yaw);
+  if (!rig.dragging) {
+    // up and down coast too, and a pull past the limits springs back
+    rig.pitchT += rig.vpitch * dt; rig.vpitch *= Math.exp(-dt * LOOK.coast * 1.5);
+    if (Math.abs(rig.vpitch) < 0.02) rig.vpitch = 0;
+    const lim = THREE.MathUtils.clamp(rig.pitchT, LOOK.down(), LOOK.up);
+    if (lim !== rig.pitchT) { rig.vpitch = 0; rig.pitchT += (lim - rig.pitchT) * Math.min(1, dt * 12); if (Math.abs(lim - rig.pitchT) < 1e-4) rig.pitchT = lim; }
+  }
+  // the view follows a moment behind where you're taking it
+  const follow = 1 - Math.exp(-dt / LOOK.ease[rig.feel]);
+  rig.yawT = wrap(rig.yawT);
+  rig.yaw = wrap(rig.yaw + wrap(rig.yawT - rig.yaw) * follow);
+  rig.pitch += (rig.pitchT - rig.pitch) * follow;
   shelfView.update(dt, camera);
   const sk = Math.min(1, dt * 8);
   rig.kbBottom += (visibleBottom() - rig.kbBottom) * sk;
   rig.peekS.yaw += (rig.peek.yaw - rig.peekS.yaw) * sk; rig.peekS.pitch += (rig.peek.pitch - rig.peekS.pitch) * sk;
-  const freePos = eyeAt(rig.yaw, eyePos), freeTarget = tmp.copy(freePos).add(lookDir(rig.yaw, rig.pitch));
+  const freePos = leanIn(eyeAt(rig.yaw, eyePos), rig.yaw, rig.pitch), freeTarget = tmp.copy(freePos).add(lookDir(rig.yaw, rig.pitch));
   if (rig.focus || (rig.from && rig.t < 1)) {
     rig.t = Math.min(1, rig.t + dt / 0.6);
     const k = ease(rig.t);
