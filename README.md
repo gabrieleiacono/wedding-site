@@ -23,7 +23,7 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-Deep links for testing: `?wall=0..3` faces a wall, `?focus=typewriter|tv|album|notebooks|calendar|...` opens an object, `?shelf=0..3` opens a shelf close-up (0 = top) and `&book=N` takes out its Nth book. `?pitch=-40` starts looking that many degrees down (the lean over the desk), and `?look=grab` flips the vertical drag so the room follows your finger (drag up to look down).
+Deep links for testing: `?wall=0..3` faces a wall, `?focus=typewriter|tv|album|notebooks|calendar|...` opens an object, `?shelf=0..3` opens a shelf close-up (0 = top) and `&book=N` takes out its Nth book. `?pitch=-40` starts looking that many degrees down (the lean over the desk), Dragging moves the room with your finger both ways (drag up to look down); `?look=tilt` flips the vertical back so dragging down looks down.
 
 ## Edit the content
 

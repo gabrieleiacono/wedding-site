@@ -110,9 +110,9 @@ const wrap = (a) => Math.atan2(Math.sin(a), Math.cos(a));
 const deg = THREE.MathUtils.degToRad;
 // How looking round feels.
 const LOOK = {
-  // dragging down looks down, as if tipping the desk towards you; ?look=grab instead moves the room
-  // with your finger both ways (drag up to look down)
-  vsign: params.get('look') === 'grab' ? 1 : -1,
+  // the room follows your finger both ways, as it already does side to side: drag up to look down
+  // (and lean over the desk). ?look=tilt gives the old feel, where dragging down looks down.
+  vsign: params.get('look') === 'tilt' ? -1 : 1,
   // how far the view turns per pixel dragged, as a multiple of how far the room under the pointer
   // moves: at 1 it would stick to your finger. Faster with a mouse, so a sweep or two turns you round.
   speed: { mouse: 2.0, touch: 1.5 },
