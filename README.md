@@ -55,6 +55,7 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/landscape.js` | The view from the window: 3D terrain, fields, trees, casale, chapel, hill town, viaduct and trains, sky and clouds |
 | `src/creatures.js` | Articulated donkeys, foals, rooster and swallows, with their little behaviours |
 | `src/typewriter-model.js` | The detailed electronic typewriter (keys, legends, LCD, paper slot) |
+| `src/console.js` | The first PlayStation (SCPH-1000/1002) under the TV, at real size: deck and raised panels, the round lid with its SONY / PlayStation top, RESET, POWER and OPEN, the LED, the front block with the memory card slots and controller ports (the pad's plug in port 1), vented flanks |
 | `src/phone.js` | The Sirio-style desk phone with its keypad and coiled cord |
 | `src/lamp.js` | The desk lamp: a Caltagirone majolica baluster with a pleated linen shade that glows at the blue hour; a click on it turns it on or off (main.js, `toggleLamp`) |
 | `src/bike.js` | The 1990s Wheeler 2100 Pro Line in neon yellow, between the TV and the bookshelf: frame paint (splatter and decals) drawn into one texture, every other fixed part merged into one mesh, spokes as lines; the crank set, the two pedals and the chain are their own meshes so a tap can push them round, and the chain is a rope that can fall off (the constants for the push, the friction and the spam limit are at the top of the file) |

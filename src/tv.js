@@ -1,9 +1,10 @@
-// Wall B (east): 32" flat-glass CRT on a black cabinet, VCR blinking 12:00, the grey console,
+// Wall B (east): 32" flat-glass CRT on a black cabinet, VCR blinking 12:00, the grey console (console.js),
 // VHS tapes, a potted plant and a wall clock (design F4).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk, makeScreen } from './ink.js';
 import { M, box, cyl, slab, ROOM, roundedShape, extrude } from './room.js';
 import { merge } from './geo.js';
+import { buildConsole } from './console.js';
 
 export function buildTV(room, teletext) {
   const g = new THREE.Group(); room.add(g);
@@ -33,27 +34,16 @@ export function buildTV(room, teletext) {
     const l = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.011), makeScreen(lab)); l.position.set(fx - 0.0015, 0.381, z - 0.33); l.rotation.y = -Math.PI / 2; g.add(l);
     for (const [ox, oz] of [[0.02, -0.19], [0.28, -0.19], [0.02, 0.19], [0.28, 0.19]]) box(0.03, 0.008, 0.03, M.black, fx + ox, 0.307, z - 0.25 + oz, g);
   }
-  // the grey console
-  const ps = new THREE.Group(); ps.position.set(x - 0.22, 0.31, z + 0.24);
-  box(0.26, 0.05, 0.27, M.grey, 0, 0.025, 0, ps);
-  // round disc lid with its hinge line, power / reset / open buttons, controller ports and card slots
-  const lidMat = makeInk({ color: '#ACA9A1', wash: 0.6 });
-  cyl(0.068, 0.07, 0.008, lidMat, 0.03, 0.054, 0.0, ps, 40);
-  box(0.004, 0.004, 0.11, M.darkgrey, 0.1, 0.051, 0, ps);
-  for (let i = 0; i < 5; i++) box(0.002, 0.004, 0.02, M.darkgrey, 0.03 + 0.04 * Math.cos(i * 1.2), 0.059, 0.04 * Math.sin(i * 1.2), ps);
-  cyl(0.012, 0.012, 0.01, M.darkgrey, -0.09, 0.055, -0.08, ps, 12);
-  cyl(0.012, 0.012, 0.01, M.darkgrey, -0.09, 0.055, 0.08, ps, 12);
-  cyl(0.016, 0.016, 0.008, lidMat, -0.07, 0.053, 0.0, ps, 16);
-  for (const sz of [-0.055, 0.055]) { box(0.004, 0.014, 0.04, M.black, -0.131, 0.018, sz, ps); box(0.004, 0.005, 0.045, M.black, -0.131, 0.038, sz, ps); }
-  for (let i = 0; i < 7; i++) box(0.004, 0.003, 0.2, M.darkgrey, 0.11 - i * 0.006, 0.051, 0, ps);
-  const led = box(0.008, 0.008, 0.008, makeInk({ color: '#3FCF5A', emissive: 1.2 }), -0.13, 0.03, 0.09, ps);
-  g.add(ps);
-  // controller lying on the floor, cable to the console
+  // the grey console: the first PlayStation (console.js), its front to the room
+  const ps = buildConsole(); ps.group.position.set(x - 0.24, 0.3, z + 0.24); ps.group.rotation.y = -Math.PI / 2; g.add(ps.group);
+  const led = ps.led;
+  // controller lying on the floor, its cable from the plug in port 1 over the shelf's edge
   const pad = buildPad(); pad.position.set(x - 0.75, 0.0, z + 0.35); pad.rotation.y = 0.4 - Math.PI / 2; g.add(pad);
+  const plugAt = ps.plugAt.clone().applyEuler(ps.group.rotation).add(ps.group.position);
   const cable = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(x - 0.35, 0.33, z + 0.28), new THREE.Vector3(x - 0.5, 0.2, z + 0.3), new THREE.Vector3(x - 0.55, 0.01, z + 0.32), new THREE.Vector3(x - 0.72, 0.01, z + 0.36),
+    plugAt, new THREE.Vector3(x - 0.5, 0.305, z + 0.22), new THREE.Vector3(x - 0.53, 0.2, z + 0.26), new THREE.Vector3(x - 0.56, 0.01, z + 0.31), new THREE.Vector3(x - 0.72, 0.01, z + 0.36),
   ]);
-  g.add(new THREE.Mesh(new THREE.TubeGeometry(cable, 40, 0.003, 5), M.darkgrey));
+  g.add(new THREE.Mesh(new THREE.TubeGeometry(cable, 48, 0.003, 5), M.darkgrey));
   // VHS tapes on the bottom shelf
   for (let i = 0; i < 7; i++) {
     box(0.19, 0.105, 0.026, i % 3 ? M.black : M.white, x - 0.22, 0.13, z - 0.4 + i * 0.03, g);
@@ -134,7 +124,7 @@ export function buildTV(room, teletext) {
 
   return {
     screen, screenWorld, glow, isTV,
-    ps: new THREE.Vector3(x - 0.22, 0.38, z + 0.24),
+    ps: new THREE.Vector3(x - 0.24, 0.37, z + 0.24),
     tick(now) {
       const d = new Date();
       const h = d.getHours() % 12 + d.getMinutes() / 60, m = d.getMinutes() + d.getSeconds() / 60;
