@@ -58,6 +58,7 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/phone.js` | The Sirio-style desk phone with its keypad and coiled cord |
 | `src/lamp.js` | The desk lamp: a Caltagirone majolica baluster with a pleated linen shade that glows at the blue hour; a click on it turns it on or off (main.js, `toggleLamp`) |
 | `src/bike.js` | The 1990s Wheeler 2100 Pro Line in neon yellow, between the TV and the bookshelf: frame paint (splatter and decals) drawn into one texture, every other fixed part merged into one mesh, spokes as lines; the crank set, the two pedals and the chain are their own meshes so a tap can push them round, and the chain is a rope that can fall off (the constants for the push, the friction and the spam limit are at the top of the file) |
+| `src/mini.js` | The 1:24 model of a classic Mini on the bookshelf, next to the tennis trophy: British racing green with twin white stripes over bonnet, roof and boot, on a walnut base. Built from the real car's measurements in full-size millimetres and shrunk 24 times (127 mm long), merged into one vertex-coloured mesh; the number plates (`PLATE`) are drawn in canvas |
 | `src/geo.js` | Noise and geometry helpers shared by the landscape and the animals |
 | `src/leggimi.js` | The LEGGIMI book on the desk: spine from `spines.js`, a cover drawn in canvas, and how it props itself up when tapped |
 | `src/overlays.js` | Album, LEGGIMI, cards, calendar, credits (and the notebooks' stories, not opened from the room any more) |

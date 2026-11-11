@@ -1,12 +1,14 @@
 // Wall C (south): the bookshelf (design F5). Real books by the authors we love, in their Italian
-// editions (spines drawn by spines.js from books-data.js), the mini hi-fi, a tennis trophy, a globe,
-// and a friend's novel standing face-out (the glowing LEGGIMI book lies on the desk: leggimi.js). Some shelf space is kept free for records, CDs and
+// editions (spines drawn by spines.js from books-data.js), the mini hi-fi, a tennis trophy, a 1:24 model
+// of a classic Mini (mini.js) and a friend's novel standing face-out (the glowing LEGGIMI book lies on
+// the desk: leggimi.js). Some shelf space is kept free for records, CDs and
 // tapes (anchors.reserved), to be filled later.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { M, box, cyl, ROOM } from './room.js';
 import { BOOKS } from './books-data.js';
 import { SpineAtlas, bookUV, rng, hashStr, loadSpineFonts, applySeries } from './spines.js';
+import { buildMini } from './mini.js';
 import { friendBook, buildFriendBook, preloadFriendCover, whenCinzel } from './friendbook.js';
 
 // The books stand in a shuffled order, not by author: the same order for every visitor, picked by
@@ -29,6 +31,9 @@ function normalise(raw, i) {
     year: raw.first_published || raw.year || 0, idx: i,
   });
 }
+
+// which way the model Mini points: its nose towards the middle of the room
+const MINI_YAW = -2.62;
 
 export function buildBookshelf(room) {
   const g = new THREE.Group(); room.add(g);
@@ -56,7 +61,7 @@ export function buildBookshelf(room) {
   // The viewer's left bay is world +x. A part is books (flexible), an object, or space kept free.
   const PLAN = [
     [[['books']], [['books'], ['reserve', 'altro', 0.3]]],
-    [[['globe', 0.55], ['books']], [['books']]],
+    [[['mini', 0.55], ['books']], [['books']]],
     [[['hifi', 0.45], ['reserve', 'cd', 0.48], ['books']], [['books'], ['friend'], ['books']]],
     [[['books']], [['books']]],
     [[['reserve', 'cd', 0]], [['reserve', 'vhs', 0]]],
@@ -171,8 +176,8 @@ export function buildBookshelf(room) {
       const w = bw || xs - sg.lo;
       anchors.reserved.push({ kind: a, x0: xs - w, x1: xs, y, height: clear, z0: front + 0.01, z1: back - 0.01 });
       cursor.set(id, xs - w);
-    } else if (kind === 'globe') {
-      buildGlobe(xs - a, y); cursor.set(id, xs - a);
+    } else if (kind === 'mini') {
+      buildTrophyAndMini(xs - a, y); cursor.set(id, xs - a);
     } else if (kind === 'hifi') {
       buildHifi(xs - a, y); cursor.set(id, xs - a);
     } else if (kind === 'friend') {
@@ -212,22 +217,19 @@ export function buildBookshelf(room) {
     sg.topY += t;
   }
 
-  function buildGlobe(xl, y) {
-    // tennis trophy + globe
+  function buildTrophyAndMini(xl, y) {
+    // tennis trophy + the model Mini
     const tx = xl + 0.43;
     box(0.08, 0.04, 0.08, mat('#2B2A2E'), tx, y + 0.02, front + 0.16, g);
     cyl(0.012, 0.02, 0.08, M.brass, tx, y + 0.08, front + 0.16, g);
     const cup = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.03, 0.12, 20, 1, true), M.brass);
     cup.position.set(tx, y + 0.18, front + 0.16); cup.castShadow = true; g.add(cup);
     for (const s of [-1, 1]) { const h = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 16, Math.PI), M.brass); h.position.set(tx + s * 0.07, y + 0.18, front + 0.16); h.rotation.z = s * -Math.PI / 2; g.add(h); }
-    const gx = xl + 0.17;
-    cyl(0.05, 0.06, 0.02, M.black, gx, y + 0.01, front + 0.16, g);
-    cyl(0.006, 0.006, 0.06, M.brass, gx, y + 0.05, front + 0.16, g);
-    const globe = new THREE.Mesh(new THREE.SphereGeometry(0.11, 28, 18), makeInk({ color: '#7FA8C9', wash: 0.7 }));
-    globe.position.set(gx, y + 0.19, front + 0.16); globe.rotation.z = 0.41; globe.castShadow = true; g.add(globe);
-    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.004, 6, 40, Math.PI * 1.3), M.brass);
-    ring.position.copy(globe.position); ring.rotation.set(0, Math.PI / 2, 0.41); g.add(ring);
-    anchors.globe = globe;
+    // the Mini on its base, at an angle so its nose and the stripes on the bonnet look out at the room
+    const mini = buildMini();
+    mini.position.set(xl + 0.17, y, front + 0.12); mini.rotation.y = MINI_YAW;
+    g.add(mini);
+    anchors.mini = mini;
   }
   function buildHifi(xl, y) {
     const hx = xl + 0.225;
