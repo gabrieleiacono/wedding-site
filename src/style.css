@@ -33,7 +33,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1E1B16; col
 #hint { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transition: opacity 0.6s; }
 #corner { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; }
 #back { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); }
-#help { position: absolute; left: 50%; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: center; max-width: calc(100% - 32px); }
+#help { position: absolute; left: 50%; width: max-content; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); font-family: 'IBM Plex Mono', monospace; font-size: 12px; text-align: center; max-width: calc(100% - 32px); }
 
 #hotspots { position: absolute; inset: 0; pointer-events: none; }
 .hot { position: absolute; transform: translate(-50%, -50%); pointer-events: auto; width: 34px; height: 34px; border-radius: 50%; border: 2px solid #fff; background: rgba(240, 86, 58, 0.78); color: #fff; font: 700 13px 'IBM Plex Mono', monospace; cursor: pointer; box-shadow: 0 0 0 0 rgba(240, 86, 58, 0.6); animation: ping 2.6s infinite; padding: 0; }
@@ -59,6 +59,15 @@ body.focused .hot, body.focused #hint { display: none; }
 #remote .fastext button { height: 36px; border: none; border-radius: 8px; font: 700 9px 'IBM Plex Mono', monospace; cursor: pointer; overflow: hidden; }
 #remote .av-keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 #remote .av-keys[hidden] { display: none; }
+/* On a phone (or a short landscape screen) the number pad folds away while you read: the page display with
+   ◀ ▶, the coloured keys and 123 (which opens the pad) stay, and the TV gets the room the pad took. */
+#remote .pad-toggle { display: none; }
+@media (max-width: 700px), (max-height: 520px) {
+  #remote .disp-row { grid-template-columns: 40px 1fr 40px 52px; }
+  #remote .pad-toggle { display: block; letter-spacing: 1px; }
+  #remote .pad-toggle[aria-expanded="true"] { background: #F3EEE4; color: #2B2B2E; }
+  #remote:not(.pad-open) .digits { display: none; }
+}
 
 #overlay { position: fixed; inset: 0; background: rgba(20, 16, 12, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
 #overlay[hidden] { display: none; }
@@ -120,7 +129,8 @@ body.focused .hot, body.focused #hint { display: none; }
   #wall-name { min-width: 0; white-space: nowrap; font-size: 11px; }
   #compass { gap: 4px; }
   #hint { bottom: 70px; }
-  #remote { right: 50%; transform: translateX(50%); bottom: 70px; }
+  #remote { right: 50%; transform: translateX(50%); bottom: calc(62px + env(safe-area-inset-bottom, 0px)); width: min(340px, calc(100% - 32px)); padding: 10px; border-radius: 20px; gap: 8px; }
+  #remote .fastext button { font-size: 10px; }
   .album { grid-template-columns: 1fr; }
   .album .page.left { display: none; }
   .notebook { grid-template-columns: 1fr; }

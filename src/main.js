@@ -438,9 +438,24 @@ const digits = remote.querySelector('.digits');
 ['1', '2', '3', '4', '5', '6', '7', '8', '9', 'AV', '0', 'TXT'].forEach((k) => {
   const b = document.createElement('button'); b.textContent = k; b.type = 'button';
   b.setAttribute('aria-label', k === 'AV' ? 'Ingresso AV: la console' : k === 'TXT' ? 'Indice del televideo' : 'Cifra ' + k);
-  b.addEventListener('click', () => { sound.tvClick(); if (k === 'AV') teletext.setAV(!teletext.av); else if (k === 'TXT') teletext.go('100'); else teletext.digit(k); refreshRemote(); });
+  b.addEventListener('click', () => {
+    sound.tvClick();
+    if (k === 'AV') teletext.setAV(!teletext.av); else if (k === 'TXT') teletext.go('100'); else teletext.digit(k);
+    if (!teletext.buf) setPad(false); // a page (or the console) has come up: fold the pad and give the TV back its room
+    refreshRemote();
+  });
   digits.appendChild(b);
 });
+// On a phone the number pad is folded away until 123 asks for it (CSS shows the toggle only there), so the
+// TV can fill most of the screen. Opening or folding it eases the camera into the new free band.
+const padToggle = remote.querySelector('.pad-toggle');
+function setPad(open) {
+  if (remote.classList.contains('pad-open') === open) return;
+  remote.classList.toggle('pad-open', open);
+  padToggle.setAttribute('aria-expanded', open);
+  if (rig.focus) { rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), ...rig.lens }; rig.t = 0; }
+}
+padToggle.addEventListener('click', () => { sound.tvClick(); setPad(!remote.classList.contains('pad-open')); });
 remote.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => { sound.tvClick(); teletext.step(+b.dataset.sub); }));
 const FASTC = [['#E8261C', '#fff'], ['#1FCF3A', '#000'], ['#FFE81A', '#000'], ['#2BD9F2', '#000']];
 function refreshRemote() {
@@ -459,8 +474,10 @@ function refreshRemote() {
 teletext.onChange = refreshRemote;
 function showRemote(on) {
   remote.hidden = !on; refreshRemote();
+  if (!on) setPad(false);
   $('#help').hidden = !on;
-  if (on) $('#help').textContent = 'Digita tre cifre (anche da tastiera) · i tasti colorati portano alle pagine';
+  // a phone has room for one short line under the remote, and no keyboard to type on
+  if (on) $('#help').textContent = getComputedStyle(padToggle).display !== 'none' ? 'Tasti colorati o 123 per cambiare pagina' : 'Digita tre cifre (anche da tastiera) · i tasti colorati portano alle pagine';
 }
 remote.querySelectorAll('[data-av]').forEach((b) => {
   const v = +b.dataset.av;
