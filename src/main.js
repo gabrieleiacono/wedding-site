@@ -5,6 +5,7 @@ import { buildRoom, EYE, ROOM, WINDOW } from './room.js';
 import { buildTV } from './tv.js';
 import { buildBookshelf } from './bookshelf.js';
 import { buildBike } from './bike.js';
+import { buildRacket } from './racket.js';
 import { buildLeggimi } from './leggimi.js';
 import { ShelfView } from './shelfview.js';
 import { Typewriter } from './typewriter.js';
@@ -71,6 +72,8 @@ const shelf = buildBookshelf(room);
 await boot(0.55, 0.66, 450 * speed);
 const bike = buildBike(room);
 Object.assign(bike.hooks, { click: (d, v) => sound.ratchet(d, v), whirr: (v) => sound.whirr(v), snap: () => sound.snap(), clink: (d, v) => sound.clink(d, v) });
+const racket = buildRacket(room); // the old wooden racket on the wall, right of the bookshelf
+racket.hooks.knock = (v) => sound.racket(v);
 const leggimi = buildLeggimi(room); // the glowing book, on the desk right of the typewriter
 const shelfView = new ShelfView({ shelf: shelf.shelf, sound });
 const typewriter = new Typewriter(room, sound);
@@ -402,6 +405,8 @@ function clickAt(x, y) {
   if (rig.focus) return;
   // a tap on the bike (the pedals above all) pushes the pedals back, freewheeling; too many, too fast, and the chain comes off
   if (hitRoom && bike.isBike(hitRoom.object)) { bike.tap(); return; }
+  // a tap on the tennis racket sets it rocking on its nail
+  if (hitRoom && racket.isRacket(hitRoom.object)) { racket.tap(); return; }
   // a tap on the TV set itself zooms in on the teletext, like its hotspot
   if (hitRoom && tv.isTV(hitRoom.object)) { activate(HOT.find((h) => h.id === 'tv')); return; }
   // a tap on the lamp turns it on or off
@@ -733,6 +738,7 @@ function drawFrame(now) {
   tv.tick(now);
   typewriter.tick(now, dt);
   bike.tick(now);
+  racket.tick(now);
   shutter += (shutterTarget - shutter) * Math.min(1, dt * 2.2); layoutShutter();
   bookOut += (bookTarget - bookOut) * Math.min(1, dt * 6);
   leggimi.tick(now, bookOut);
@@ -780,4 +786,4 @@ if (params.has('shelf')) setTimeout(() => {
   if (params.has('book')) setTimeout(() => shelfView.pull(shelfView.row.books[+params.get('book')] ?? shelfView.row.books[0]), 900);
 }, 300);
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
-window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView, bike, sound };
+window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView, bike, racket, sound };

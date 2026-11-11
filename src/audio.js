@@ -104,6 +104,15 @@ export class Sound {
     const base = 2200 + Math.random() * 1800;
     for (const [m, k] of [[1, 0.5], [1.52, 0.3], [2.31, 0.18]]) { const o = this.ctx.createOscillator(); o.frequency.value = base * m; this.env(o, t, 0.0008, v * k * 0.5, 0.05 + 0.08 * strength); o.start(t); o.stop(t + 0.2); }
   }
+  // the wooden racket knocked on its nail: a hollow wooden tock against the wall, and the gut strings humming
+  racket(strength = 0.6) {
+    if (!this.ok) return; const t = this.ctx.currentTime, v = 0.25 + 0.35 * strength;
+    const n = this.noise(0.06); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 700 + Math.random() * 200; f.Q.value = 3;
+    n.connect(f); this.env(f, t, 0.001, v, 0.05); n.start(t);
+    const o = this.ctx.createOscillator(); o.frequency.setValueAtTime(320, t); o.frequency.exponentialRampToValueAtTime(210, t + 0.08); this.env(o, t, 0.001, v * 0.5, 0.08); o.start(t); o.stop(t + 0.12);
+    const base = 480 + Math.random() * 60;
+    for (const [m, k] of [[1, 0.06], [2.01, 0.03], [2.98, 0.015]]) { const s = this.ctx.createOscillator(); s.type = 'triangle'; s.frequency.value = base * m; this.env(s, t + 0.004, 0.003, k * v, 0.35); s.start(t); s.stop(t + 0.45); }
+  }
   // the brass turn-switch under the lamp's shade: a short dry double click
   lampSwitch() {
     if (!this.ok) return; const t = this.ctx.currentTime;
