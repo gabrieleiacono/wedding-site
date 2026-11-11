@@ -66,6 +66,9 @@ export function buildTV(room, teletext) {
   const screenMat = makeScreen(teletext.texture);
   const screen = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), screenMat);
   screen.position.set(-0.252, bh / 2 + 0.04, 0); screen.rotation.y = -Math.PI / 2; tv.add(screen);
+  // the dark glass of the tube, just behind the picture: what is left when the set is switched off
+  const tube = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), makeInk({ color: '#1C201F', wash: 0.85 }));
+  tube.position.copy(screen.position); tube.position.x += 0.001; tube.rotation.y = -Math.PI / 2; tv.add(tube);
   // flat glass reflection: a faint diagonal sheen
   const sheen = new THREE.Mesh(new THREE.PlaneGeometry(sw, sh), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.008, depthWrite: false }));
   sheen.position.copy(screen.position); sheen.position.x -= 0.002; sheen.rotation.y = -Math.PI / 2; tv.add(sheen);
@@ -114,10 +117,32 @@ export function buildTV(room, teletext) {
   // the set itself (body, screen, bezel, antenna): a tap on it zooms in on the teletext
   const isTV = (o) => { for (; o; o = o.parent) if (o === tv) return true; return false; };
 
+  // power: 1 on, 0 off. Switching off squeezes the picture into a bright line and then a dot, as a CRT
+  // does; switching on opens it again, quicker.
+  const pw = { on: true, k: 1, t: 0 };
+  const POWER_OFF = 0.45, POWER_ON = 0.3; // seconds
+  function powerFrame(now) {
+    const dt = pw.t ? Math.min(0.1, (now - pw.t) / 1000) : 0; pw.t = now;
+    const want = pw.on ? 1 : 0;
+    if (pw.k === want) return;
+    pw.k = pw.on ? Math.min(1, pw.k + dt / POWER_ON) : Math.max(0, pw.k - dt / POWER_OFF);
+    // first the height goes (k 1 → 0.45), then the width (0.45 → 0)
+    const ky = THREE.MathUtils.smoothstep(pw.k, 0.45, 1), kx = THREE.MathUtils.smoothstep(pw.k, 0, 0.45);
+    screen.scale.set(Math.max(0.004, kx), Math.max(0.012, ky), 1);
+    screen.visible = pw.k > 0;
+    const flare = 1 + (1 - ky) * 1.5; // the squeezed line burns brighter
+    screenMat.color.setScalar(flare);
+  }
+
   return {
     screen, screenWorld, glow, isTV,
     ps: new THREE.Vector3(x - 0.24, 0.37, z + 0.24),
+    get on() { return pw.on; },
+    /** 0 (off) … 1 (on), following the switch-off and switch-on animation: the room glow fades with it. */
+    get power() { return pw.k; },
+    setPower(on) { pw.on = on; },
     tick(now) {
+      powerFrame(now);
       const d = new Date();
       const h = d.getHours() % 12 + d.getMinutes() / 60, m = d.getMinutes() + d.getSeconds() / 60;
       hourHand.rotation.x = -h / 12 * Math.PI * 2; minHand.rotation.x = -m / 60 * Math.PI * 2;

@@ -123,7 +123,7 @@ function updateLight() {
   const lampOn = lampState.k;
   lamp.intensity = lampOn * 0.9;
   anchors.lampGlow(lampOn);
-  tv.glow.intensity = 0.1 + dusk * 0.3;
+  tv.glow.intensity = (0.1 + dusk * 0.3) * tv.power;
 }
 
 // --- camera rig ------------------------------------------------------------------------
@@ -495,6 +495,8 @@ function setPad(open) {
   padToggle.setAttribute('aria-expanded', open);
   if (rig.focus) { rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), ...rig.lens }; rig.t = 0; }
 }
+// POWER switches the set off and puts the remote down: the same as going back to the room
+remote.querySelector('.power-key').addEventListener('click', () => { sound.tvClick(); tv.setPower(false); unfocus(); });
 padToggle.addEventListener('click', () => { sound.tvClick(); setPad(!remote.classList.contains('pad-open')); });
 remote.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => { sound.tvClick(); teletext.step(+b.dataset.sub); }));
 // SIZE, as on a real remote: on a phone it redraws the body of the pages in bigger letters (CSS shows it only there)
@@ -520,6 +522,7 @@ function refreshRemote() {
 }
 teletext.onChange = refreshRemote;
 function showRemote(on) {
+  if (on) tv.setPower(true); // picking up the remote (or the pad, or dialling the FAQ) switches the set back on
   remote.hidden = !on; refreshRemote();
   if (!on) setPad(false);
   $('#help').hidden = !on;

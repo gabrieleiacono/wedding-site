@@ -65,8 +65,15 @@ body.focused .hot, body.focused #hint { display: none; }
 @keyframes more-pulse { 50% { box-shadow: 0 0 0 4px rgba(255, 232, 26, 0.35); } }
 @media (prefers-reduced-motion: reduce) { #remote .disp-row button.more { animation: none; } }
 #remote .pad-toggle, #remote .size-key { display: none; }
+/* POWER: red, alone on the top row at the right as on a real remote; on a phone it closes the display row instead */
+#remote .disp-row > :not(.power-key) { grid-row: 2; }
+#remote .disp-row .power-key { grid-row: 1; grid-column: 3; height: 28px; background: #B3261E; display: flex; align-items: center; justify-content: center; padding: 0; }
+#remote .disp-row .power-key svg { width: 16px; height: 16px; fill: none; stroke: #F3EEE4; stroke-width: 2.6; stroke-linecap: round; }
+#remote .disp-row .power-key:active { background: #8E1E17; }
 @media (max-width: 700px), (max-height: 520px) {
-  #remote .disp-row { grid-template-columns: 40px 1fr 40px 44px 52px; }
+  #remote .disp-row { grid-template-columns: 40px 1fr 40px 44px 52px 36px; }
+  #remote .disp-row > :not(.power-key) { grid-row: auto; }
+  #remote .disp-row .power-key { grid-row: auto; grid-column: auto; height: 36px; }
   #remote .pad-toggle, #remote .size-key { display: block; letter-spacing: 1px; }
   #remote .size-key[aria-pressed="true"] { background: #F3EEE4; color: #2B2B2E; }
   #remote .pad-toggle[aria-expanded="true"] { background: #F3EEE4; color: #2B2B2E; }
