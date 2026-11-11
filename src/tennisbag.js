@@ -1,7 +1,8 @@
 // A tennis racket bag lying on the second shelf from the bottom of the bookshelf, under the books: a
 // padded six-racket "thermo" bag in bottle green with cream piping, shaped from photos of real ones
 // (wedding-site-shots/tennis-bag/refs in the project files). Its body is a superquadric, a rounded box
-// with padded faces, taller at the end where the racket heads go and lower towards the handles. On it:
+// with padded faces and a wedge in profile: tall and round at the end where the racket heads go, its top
+// sloping down to a handle end less than half as high. On it:
 // the two main zips along the top with their pullers, a padded front pocket with its own zip, piping
 // round the side panels and the pocket, two carry handles sewn on with box-and-cross stitching and
 // joined by a wrapped grip, a shoulder strap clipped to D-rings at each end with its shoulder pad slipped
@@ -13,32 +14,37 @@ import * as THREE from '../vendor/three.module.min.js'; // by path, not an impor
 import { makeInk } from './ink.js';
 import { merge, vnoise } from './geo.js';
 
-// size of a six-racket bag, a little smaller than most so it fits under the shelf above (31.5 cm clear)
-export const BAG = { len: 0.74, depth: 0.25, head: 0.265, foot: 0.215 };
+// size of a six-racket bag, a little smaller than most so it fits under the shelf above (31.5 cm clear).
+// Like every racket bag it is a wedge: tall and deep at the end where the racket heads go, and the top
+// slopes down to the handle end, less than half as high and a little narrower.
+export const BAG = { len: 0.74, depth: 0.25, head: 0.31, foot: 0.125, footDepth: 0.78 };
 const C = {
   body: '#1F4236', pocket: '#1B3A2F', piping: '#E6DDC6', zip: '#1E1E21', tape: '#2A2B2E', metal: '#B8BBBA',
   pull: '#E6DDC6', webbing: '#1D1D20', pad: '#1F4236', grip: '#2B2B2E', thread: '#D8CFB6', badge: '#E6DDC6', badgeRim: '#1F4034',
 };
 
 // --- the body: (|y|^P + |z|^P)^(Q/P) + |x|^Q = 1, then stretched to size --------------------------------
-const P = 5.5, Q = 4.2; // P: the cross-section's corners; Q: how square the ends are
+// P: the cross-section's corners; Q: how square the ends are, round at the head end (the racket heads'
+// curve) and squarer at the handle end
+const P = 5.5, QH = 2.6, QF = 4.6;
+const Qof = (X) => (X > 0 ? QH : QF);
 const S = (t, e) => Math.sign(t) * Math.pow(Math.abs(t), e);
 const A = BAG.len / 2, CZ = BAG.depth / 2;
-const heightAt = (X) => BAG.foot + (BAG.head - BAG.foot) * Math.pow((X + 1) / 2, 0.85);
+const heightAt = (X) => BAG.foot + (BAG.head - BAG.foot) * Math.pow((X + 1) / 2, 1.15);
 /** A point of the unit shape (X, Y, Z in -1..1) to the bag's frame. */
 function deform(X, Y, Z, out = new THREE.Vector3()) {
   const t = (X + 1) / 2, h = heightAt(X);
   const lump = (vnoise(X * 5 + 3, Y * 4 + Z * 3) - 0.5) * 0.004 * (1 - Math.abs(Y) ** 6); // the padding is never quite even
-  return out.set(A * X, (Y + 1) / 2 * h, Z * CZ * (0.92 + 0.08 * t) * (1 + lump));
+  return out.set(A * X, (Y + 1) / 2 * h, Z * CZ * (BAG.footDepth + (1 - BAG.footDepth) * Math.sqrt(t)) * (1 + lump));
 }
 /** The body's surface by (th, ph): th round the cross-section (0 back, π/2 top, π front), ph along it (±π/2 the ends). */
 function unit(th, ph) {
-  const R = S(Math.cos(ph), 2 / Q);
+  const Q = ph > 0 ? QH : QF, R = S(Math.cos(ph), 2 / Q);
   return [S(Math.sin(ph), 2 / Q), R * S(Math.sin(th), 2 / P), R * S(Math.cos(th), 2 / P)];
 }
 const body = (th, ph, out) => deform(...unit(th, ph), out);
-const phAt = (X) => Math.asin(S(X, Q / 2)); // the ph of the cross-section at X
-const CENTRE = new THREE.Vector3(0, BAG.head * 0.45, 0);
+const phAt = (X) => Math.asin(S(X, Qof(X) / 2)); // the ph of the cross-section at X
+const CENTRE = new THREE.Vector3(0, BAG.foot * 0.5, 0);
 
 /** Outward normal of a surface fn(s, t) at (s, t), by finite differences. */
 function normalOf(fn, s, t, hint) {
@@ -174,7 +180,7 @@ function piping(zs, k = 0.86) {
     let lo = 0, hi = 1.2;
     for (let it = 0; it < 30; it++) { // the radius at which this ray leaves the shape, in the plane Z = zs·k
       const r = (lo + hi) / 2, X = r * ca, Y = r * sa;
-      const f = Math.pow(Math.pow(Math.abs(Y), P) + Math.pow(k, P), Q / P) + Math.pow(Math.abs(X), Q);
+      const Q = Qof(X), f = Math.pow(Math.pow(Math.abs(Y), P) + Math.pow(k, P), Q / P) + Math.pow(Math.abs(X), Q);
       if (f < 1) lo = r; else hi = r;
     }
     pts.push(deform(lo * ca, lo * sa, zs * k));
@@ -203,7 +209,7 @@ function mainZips() {
 const PK = { x: -0.1, w: 0.56, y: -0.08, h: 0.6, th: 0.01 };
 function pocketBase(u, v) {
   const X = PK.x + u * PK.w, Y = PK.y + v * PK.h;
-  const Z = -Math.pow(Math.max(0, Math.pow(1 - Math.pow(Math.abs(X), Q), P / Q) - Math.pow(Math.abs(Y), P)), 1 / P);
+  const Q = Qof(X), Z = -Math.pow(Math.max(0, Math.pow(1 - Math.pow(Math.abs(X), Q), P / Q) - Math.pow(Math.abs(Y), P)), 1 / P);
   return deform(X, Y, Z);
 }
 const pocketBump = (u, v) => Math.pow(Math.max(0, 1 - Math.pow(Math.abs(u), 5) - Math.pow(Math.abs(v), 5)), 0.3);
@@ -251,7 +257,7 @@ function frontPocket() {
 /** The carry handles: two webbing loops sewn to the front and back panels, flopped onto the top and
  *  held together by a wrapped grip. */
 function handles() {
-  const xs = [-0.2, 0.2], grip = { x: 0.085, lift: 0.014 };
+  const xs = [-0.42, 0.42], grip = { x: 0.2, lift: 0.014 }; // in the body's unit length (±1 the ends)
   for (const f of [1, -1]) { // f = 1 the front handle
     const thA = Math.PI / 2 + f * 0.78, thG = Math.PI / 2 + f * 0.05;
     // from one stitched end up over the top, along under the grip, and down to the other
@@ -269,11 +275,13 @@ function handles() {
       boxStitch(pts[i].clone().addScaledVector(nrm[i], 0.0034), T, nrm[i], 0.024, 0.024);
     }
   }
-  // the grip: a padded wrap round both handles, closed with a strip of velcro
-  const top = body(Math.PI / 2, 0, new THREE.Vector3()), gx = grip.x * 0.92;
-  const g = new THREE.CapsuleGeometry(0.0125, 2 * gx, 4, 14).rotateZ(Math.PI / 2).scale(1, 0.62, 1.15);
-  add(g.translate(0, top.y + grip.lift + 0.009, top.z + 0.003), C.grip);
-  for (const s of [-1, 1]) add(new THREE.TorusGeometry(0.0128, 0.0016, 5, 16).rotateY(Math.PI / 2).scale(1, 0.62, 1.15).translate(s * gx * 0.9, top.y + grip.lift + 0.009, top.z + 0.003), C.thread);
+  // the grip: a padded wrap round both handles, closed with a strip of velcro, lying along the sloping top
+  const end = (X) => { const ph = phAt(X); return body(Math.PI / 2, ph, new THREE.Vector3()).addScaledVector(normalOf(bodyFn, Math.PI / 2, ph, outward), grip.lift + 0.009).add(new THREE.Vector3(0, 0, 0.003)); };
+  const a = end(-grip.x * 0.92), b = end(grip.x * 0.92), along = b.clone().sub(a), len = along.length();
+  const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(1, 0, 0), along.normalize()), mid = a.clone().add(b).multiplyScalar(0.5);
+  const g = new THREE.CapsuleGeometry(0.0125, len, 4, 14).rotateZ(Math.PI / 2).scale(1, 0.62, 1.15);
+  add(g.applyQuaternion(q).translate(mid.x, mid.y, mid.z), C.grip);
+  for (const s of [-1, 1]) add(new THREE.TorusGeometry(0.0128, 0.0016, 5, 16).rotateY(Math.PI / 2).scale(1, 0.62, 1.15).translate(s * len * 0.45, 0, 0).applyQuaternion(q).translate(mid.x, mid.y, mid.z), C.thread);
 }
 
 /** The shoulder strap, clipped to a D-ring near each end and slipped over the front edge in the middle,
