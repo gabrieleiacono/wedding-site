@@ -7,10 +7,9 @@ import { buildTypewriterModel } from './typewriter-model.js';
 
 export const STEPS = [
   { id: 'name', q: 'COME TI CHIAMI?', label: 'NOME' },
-  { id: 'coming', q: 'VERRAI? (S/N)', label: 'VIENE', yn: true },
-  { id: 'count', q: 'IN QUANTI?', label: 'IN', numeric: true, onlyIfComing: true },
+  { id: 'coming', q: 'CI SARAI? (S/N)', label: 'CI SARÀ', yn: true },
   { id: 'allergies', q: 'ALLERGIE?', label: 'ALLERGIE', onlyIfComing: true },
-  { id: 'song', q: 'UNA CANZONE?', label: 'CANZONE', onlyIfComing: true },
+  { id: 'word', q: 'UNA PAROLA BUFFA?', label: 'PAROLA', onlyIfComing: true },
   { id: 'message', q: 'UN MESSAGGIO?', label: 'MSG' },
 ];
 const PAPER_W = 0.21, PAPER_H = 0.297, LINE_H = 0.0135, MARGIN_TOP = 0.032, COLS = 27;
@@ -65,8 +64,8 @@ export class Typewriter {
     this.group.updateMatrixWorld(true);
     const pts = [], TEXT_W = PAPER_W - 0.03; // the typed column, not the bare margins
     for (const [x, y] of [[-0.066, -0.012], [0.066, -0.012], [-0.066, 0.012], [0.066, 0.012]]) pts.push(this.lcd.localToWorld(new THREE.Vector3(x, y, 0)));
-    // the line being typed sits on the print line (the pivot); earlier lines and the heading climb above it, six questions at most
-    const top = PRINT_LIFT + 5 * LINE_H + (MARGIN_TOP - 0.018) + 0.012;
+    // the line being typed sits on the print line (the pivot); earlier lines and the heading climb above it, five questions at most
+    const top = PRINT_LIFT + (STEPS.length - 1) * LINE_H + (MARGIN_TOP - 0.018) + 0.012;
     for (const [x, y] of [[-TEXT_W / 2, -0.004], [TEXT_W / 2, -0.004], [-TEXT_W / 2, top], [TEXT_W / 2, top]]) pts.push(this.paperPivot.localToWorld(new THREE.Vector3(x, y, 0)));
     return pts;
   }
@@ -140,8 +139,8 @@ export class Typewriter {
     this.finished = true;
     const a = this.answers;
     this.record = {
-      name: a.name, coming: !!a.coming, count: a.coming ? parseInt(a.count || '1', 10) : 0,
-      allergies: a.allergies || '', song: a.song || '', message: a.message || '', at: new Date().toISOString(),
+      name: a.name, coming: !!a.coming, count: a.coming ? 1 : 0, // one answer, one guest
+      allergies: a.allergies || '', word: a.word || '', message: a.message || '', at: new Date().toISOString(),
     };
     this.lines.push({ t: '', c: '#2A2420' });
     this.lines.push({ t: a.coming ? 'A PRESTO!' : 'CI MANCHERAI.', c: '#B6402A', prefix: '' });

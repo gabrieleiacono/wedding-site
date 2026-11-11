@@ -3,8 +3,8 @@
 An interactive wedding announcement: a 1990s Italian study at sunset, drawn in pen and ink.
 Turn around the room; every piece of wedding information lives in an object.
 
-- **Typewriter**: RSVP (6 questions on the LCD, type with your keyboard)
-- **TV + remote**: teletext pages (100 index, 101 programme, 200 travel, 210 stay, 300 weather, 400 dress code, 500 RSVP, 600 live guestbook, 700 FAQ, 888 hidden). AV = the console's tennis game.
+- **Typewriter**: RSVP (5 questions on the LCD, type with your keyboard)
+- **TV + remote**: teletext pages (100 index, 101 programme, 200 travel, 300 weather, 400 dress code, 500 RSVP, 600 live guestbook, 700 FAQ, 888 hidden; a page too long for one screen is split into subpages, turned with ◀ ▶ on the remote or the arrow keys). AV = the console's tennis game.
 - **Album, notebooks**: photos and five short stories
 - **Bookshelf**: 383 real books in their Italian editions. Tap a book (or the Aa hotspot) to get close to a shelf: drag along it, ▲▼ to change shelf, author chips to jump, pinch or wheel to zoom. Tap a book to take it out and read its library card. The glowing LEGGIMI book, the hi-fi playlist. Just right of LEGGIMI a friend's novel, *La causa dei vivi* (Anna Gabriella Rusconi, Cronache Ribelli), stands face-out on a little stand: taken out, it turns to show its cover (tap it to turn it over) and its card links to the publisher's page
 - **Bike**: a yellow Wheeler 2100 in the corner between the TV and the shelf. Tap it, the pedals above all, and the pedals get a push backwards (one tap = one turn), clicking like a freewheel at exactly the speed they turn; taps add up. Tap it faster than 5 a second (8 taps within 1.5 s) and the chain falls off the ring, for good until the page is reloaded.

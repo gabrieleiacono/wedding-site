@@ -441,6 +441,7 @@ const digits = remote.querySelector('.digits');
   b.addEventListener('click', () => { sound.tvClick(); if (k === 'AV') teletext.setAV(!teletext.av); else if (k === 'TXT') teletext.go('100'); else teletext.digit(k); refreshRemote(); });
   digits.appendChild(b);
 });
+remote.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => { sound.tvClick(); teletext.step(+b.dataset.sub); }));
 const FASTC = [['#E8261C', '#fff'], ['#1FCF3A', '#000'], ['#FFE81A', '#000'], ['#2BD9F2', '#000']];
 function refreshRemote() {
   const f = remote.querySelector('.fastext'); f.innerHTML = '';
@@ -452,6 +453,7 @@ function refreshRemote() {
     f.appendChild(b);
   });
   remote.querySelector('.av-keys').hidden = !teletext.av;
+  remote.querySelectorAll('[data-sub]').forEach((b) => { b.disabled = teletext.subCount() < 2; });
   $('#remote-display').textContent = teletext.av ? 'AV1' : 'P' + (teletext.buf ? (teletext.buf + '___').slice(0, 3) : teletext.page === 'none' ? teletext.missing : teletext.page);
 }
 teletext.onChange = refreshRemote;
@@ -474,6 +476,7 @@ window.addEventListener('keydown', (e) => {
   const onTV = rig.focus && rig.focus.lean === TV_LEAN;
   if (onTV) {
     if (/^[0-9]$/.test(e.key)) { sound.tvClick(); teletext.digit(e.key); refreshRemote(); return; }
+    if (!teletext.av && (e.key === 'ArrowLeft' || e.key === 'ArrowRight') && teletext.subCount() > 1) { sound.tvClick(); teletext.step(e.key === 'ArrowRight' ? 1 : -1); e.preventDefault(); return; }
     if (teletext.av && ['ArrowUp', 'ArrowDown', 'w', 's'].includes(e.key)) { teletext.tennis.input = e.key === 'ArrowUp' || e.key === 'w' ? -1 : 1; e.preventDefault(); return; }
   }
   if (rig.focus?.peek && e.key.startsWith('Arrow')) {

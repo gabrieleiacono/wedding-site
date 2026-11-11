@@ -9,48 +9,70 @@ export const WEDDING = {
   dateISO: '2027-05-29',
   villa: 'Cascina Carretto',
   town: 'Erbusco',
-  address: '[Via], 25030 Erbusco (BS)',
-  rsvpBy: '[data]',
-  contact: '[telefono / e-mail]',
+  address: 'Erbusco (BS)',
+  rsvpBy: '15 gennaio 2027',
 };
 
+// Teletext pages: each `text` is a list of paragraphs, wrapped to the screen and split into subpages when long.
+
+// 101: Quindi cosa si fa?
 export const PROGRAMME = {
-  saturday: [
-    ['[15:00]', 'Cerimonia'],
-    ['[16:30]', 'Aperitivo in giardino'],
-    ['[19:30]', 'Cena'],
-    ['[22:00]', 'Torta e balli'],
-    ['[02:00]', 'Ultimo giro'],
+  title: 'Quindi cosa si fa?',
+  day: 'Sabato 29 maggio',
+  rows: [['15.30', 'Arrivo invitati presso Cascina Carretto - Erbusco (BS)']],
+  text: [
+    'Non avrete davvero pensato che avremmo scandito ogni momento della giornata in modo preciso, vero?',
+    'L’idea, in linea generale, è: ci troviamo tutti allegramente alle 15.30, ci sistemiamo e diamo inizio al nostro matrimonio, seguiranno, non per forza in quest’ordine: un ricco rinfresco, una deliziosa cena, delle danze più o meno pazze, dei discorsi più o meno strappalacrime, molte risate, felicità a secchiate, amore a palate e tutte le cose che non siamo assolutamente in grado di governare con anticipo ma che siamo sicuri renderanno questa una giornata speciale.',
   ],
-  sunday: [['[11:00]', 'Brunch per chi resta']],
 };
 
-export const TRAVEL = [
-  ['LA VILLA', `${WEDDING.villa}, ${WEDDING.address}`],
-  ['IN TRENO', 'Stazione di [città], poi navetta alle [ore].'],
-  ['IN AEREO', '[Aeroporto]: [N] km dalla villa.'],
-  ['IN AUTO', 'Uscita [casello]. Parcheggio in villa.'],
-  ['DA MODICA E DA DARFO', '[I vostri consigli per le famiglie]'],
-];
-
-export const STAY = {
-  hotels: [['[Hotel 1]', '[N] km'], ['[Hotel 2]', '[N] km'], ['[B&B 3]', '[N] km']],
-  code: '[CODICE]',
-  bookBy: '[data]',
-  shuttle: 'Dagli hotel alla villa alle [ore], ritorno alle [ore].',
+// 200: Come arrivare
+export const TRAVEL = {
+  title: 'Come arrivare',
+  text: [
+    'La cerimonia e il ricevimento si terranno presso la tenuta Cascina Carretto nell’omonima località di Erbusco (BS). Saremo circondati da bellissimi vigneti e prati, che si estendono per tutta la Franciacorta, un posto magnifico che non ci fornisce nessun punto di riferimento utile per segnalarvi il percorso. Siamo comunque fiduciosi che Google Maps o qualsiasi altro sistema di navigazione potrà aiutarvi a trovare la strada per raggiungerla, se siete in difficoltà chiamateci (probabilmente non risponderemo, ma non preoccupatevi: stiamo bene).',
+  ],
 };
 
+// 300: Meteo
+export const WEATHER = {
+  title: 'Meteo',
+  text: [
+    'Qualsiasi condizione meteo è possibile e ammessa. Noi speriamo che non faccia troppo caldo ma che non si metta a diluviare, in ogni caso: con la pioggia o con il sole il matrimonio si terrà e saremo felici in egual modo.',
+    'Questa sezione in tempi come questi è abbastanza inutile, ma in qualche modo dovremo pur popolare questo televideo.',
+  ],
+};
+
+// 400: Dress code
 export const DRESS = {
-  line: '[Il vostro dress code, in una riga]',
-  rows: [['LUI', '[--]'], ['LEI', '[--]'], ['SCARPE', '[--]']],
-  tip: '[un consiglio, es. tacchi larghi: c\'è il prato]',
+  title: 'Dress code',
+  text: [
+    'Come ben sapete non siamo avvezzi a questo genere di usanze; l’unico nostro auspicio è che ciascuno di voi si senta a proprio agio. Non ponete freni alla vostra fantasia, siamo sicuri che sarete bellissimi.',
+  ],
 };
 
+// 500: Facci sapere
+export const RSVP = {
+  title: 'Facci sapere',
+  text: [
+    `Potete confermarci la vostra presenza, entro il ${WEDDING.rsvpBy}, interagendo con la macchina da scrivere che si trova sulla scrivania qui accanto (A).`,
+    'Se avete già risposto potete andare alla pagina 600 del televideo!',
+  ],
+};
+
+// 600: Libro degli ospiti (filled in by the guests' answers)
+export const GUESTBOOK = { title: 'Libro degli ospiti' };
+
+// 700: FAQ, as [question, answer paragraphs]
 export const FAQ = [
-  ['Posso portare i bambini?', '[Risposta]'],
-  ['C\'è parcheggio?', '[Risposta]'],
-  ['Lista nozze?', '[Risposta]'],
-  ['Fino a che ora si balla?', '[Risposta]'],
+  ['Chi è che si sposa?', ['Paola e Gabriele!']],
+  ['C’è un dress code?', ['Vai a pagina 400 del televideo']],
+  ['C’è parcheggio?', ['Sì, troverete tutto il parcheggio di cui avete bisogno.']],
+  ['Lista nozze e regali', ['La casa in cui viviamo è piccola e non ci manca nulla, il miglior regalo che possiate farci è starci accanto in questo giorno importante. Vogliamo che ciascuno si senta libero di contribuire solo se e come può noi non ci faremo attenzione, ogni donazione servirà a finanziare la nostra spedizione di ricerca della Valle dei Mumin (Mumindalen).']],
+  ['Se ho allergie, intolleranze o seguo un regime alimentare non convenzionale', [
+    'Nessun problema! Segnalatecelo quanto prima in modo da organizzare al meglio il nostro banchetto, senza pensieri e preoccupazioni.',
+    'In ogni caso, segnalatelo anche ai camerieri quel giorno, affinché non ci siano incidenti.',
+  ]],
 ];
 
 // Photo album: swap `src` for real photos (any orientation). Without src a sketch placeholder is drawn.
@@ -81,7 +103,7 @@ export const STORIES = [
 // The glowing "LEGGIMI" book on the shelf.
 export const LEGGIMI = {
   title: 'Leggimi',
-  body: 'Benvenuti nel nostro studio.\n\nGiratevi pure, toccate tutto: la macchina da scrivere per rispondere, il televisore per le informazioni, l\'album e i quaderni per ridere un po\' di noi.\n\n[Un messaggio vostro per gli ospiti.]',
+  body: 'Benvenuti nell’anticamera del nostro matrimonio! Questo è un luogo virtuale per prepararci insieme a questo magico avvenimento. Non siate timidi e interagite con gli oggetti della stanza.\nLa macchina da scrivere serve per confermare la vostra partecipazione, mentre il televisore è sintonizzato su un televideo pieno zeppo di informazioni utili.\n\nIn questa libreria ci sono alcuni degli autori che amiamo di più e anche qualche piccolo easter egg, sentitevi liberi di spulciarla :)',
 };
 
 export const CREDITS = [

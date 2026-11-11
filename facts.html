@@ -25,20 +25,21 @@
 <body>
 <main id="facts"><p>Caricamento…</p></main>
 <script type="module">
-  import { WEDDING, PROGRAMME, TRAVEL, STAY, DRESS, FAQ } from './src/content.js';
+  import { WEDDING, PROGRAMME, TRAVEL, WEATHER, DRESS, RSVP, FAQ } from './src/content.js';
   const e = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const dl = (rows) => `<dl>${rows.map(([a, b]) => `<dt>${e(a)}</dt><dd>${e(b)}</dd>`).join('')}</dl>`;
+  const ps = (list) => list.map((t) => `<p>${e(t)}</p>`).join('');
+  const sec = (s) => `<h2>${e(s.title)}</h2>${ps(s.text)}`;
   document.getElementById('facts').innerHTML = `
     <h1>${e(WEDDING.names)}</h1>
     <p class="lead">${e(WEDDING.dateLong)} · ${e(WEDDING.villa)}, ${e(WEDDING.address)}</p>
     <p><a href="index.html">← Torna allo studio</a></p>
-    <h2>Il programma</h2>${dl(PROGRAMME.saturday)}<p><b>Domenica</b></p>${dl(PROGRAMME.sunday)}
-    <h2>Come arrivare</h2>${dl(TRAVEL)}
-    <h2>Dove dormire</h2>${dl(STAY.hotels)}<p>Codice sconto: <b>${e(STAY.code)}</b> · prenotate entro il ${e(STAY.bookBy)}.<br>Navetta: ${e(STAY.shuttle)}</p>
-    <h2>Dress code</h2><p>${e(DRESS.line)}</p>${dl(DRESS.rows)}<p>${e(DRESS.tip)}</p>
-    <h2>Rispondi</h2><p>Si risponde con la macchina da scrivere nello <a href="index.html?focus=typewriter">studio</a>, entro il ${e(WEDDING.rsvpBy)}.</p>
-    <h2>Domande frequenti</h2>${dl(FAQ)}
-    <p>Altre domande? ${e(WEDDING.contact)}</p>`;
+    <h2>${e(PROGRAMME.title)}</h2><p><b>${e(PROGRAMME.day)}</b></p>${dl(PROGRAMME.rows)}${ps(PROGRAMME.text)}
+    ${sec(TRAVEL)}
+    ${sec(WEATHER)}
+    ${sec(DRESS)}
+    <h2>${e(RSVP.title)}</h2><p>Potete confermarci la vostra presenza, entro il ${e(WEDDING.rsvpBy)}, con la macchina da scrivere nello <a href="index.html?focus=typewriter">studio</a>.</p>
+    <h2>Domande frequenti</h2>${FAQ.map(([q, a]) => `<p><b>${e(q)}</b></p>${ps(a)}`).join('')}`;
 </script>
 </body>
 </html>

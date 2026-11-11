@@ -59,12 +59,12 @@ export class Overlays {
   leggimi() { this.show(`<div class="lined" style="max-width:560px"><h2>${esc(LEGGIMI.title)}</h2>${esc(LEGGIMI.body)}</div>`); }
 
   playlist() {
-    this.show(`<div class="sheet" style="max-width:420px"><div class="mono" style="font-size:12px;color:#9A8A72">MINI HI-FI · CASSETTA LATO A</div><h2 class="hand" style="font-size:34px;margin:6px 0 10px;color:#B6402A">La nostra playlist</h2><ol class="hand" style="font-size:22px;margin:0;padding-left:24px">${PLAYLIST.map((p) => `<li>${esc(p)}</li>`).join('')}</ol><p class="mono" style="font-size:12px;color:#6A5A4A;margin:14px 0 0">Le canzoni scritte alla macchina da scrivere finiscono qui.</p></div>`);
+    this.show(`<div class="sheet" style="max-width:420px"><div class="mono" style="font-size:12px;color:#9A8A72">MINI HI-FI · CASSETTA LATO A</div><h2 class="hand" style="font-size:34px;margin:6px 0 10px;color:#B6402A">La nostra playlist</h2><ol class="hand" style="font-size:22px;margin:0;padding-left:24px">${PLAYLIST.map((p) => `<li>${esc(p)}</li>`).join('')}</ol></div>`);
   }
 
   replyCard(r, n) {
     const row = (k, v) => v ? `<div>${k}: ${esc(v)}</div>` : '';
-    this.show(`<div class="sheet card"><div class="num">RISPOSTA N. ${String(n).padStart(3, '0')}</div><div style="margin-top:8px">${esc(r.name).toUpperCase()}</div>${row('VIENE', r.coming ? 'SÌ' : 'NO')}${r.coming ? row('IN', String(r.count)) + row('ALLERGIE', r.allergies || 'nessuna') + row('CANZONE', r.song) : ''}${row('MSG', r.message)}<hr><div class="thanks">${r.coming ? 'grazie! a presto' : 'grazie lo stesso!'}</div><div class="mono" style="font-size:12px;color:#6A5A4A">Il tuo nome è sul televideo, pagina 600.</div></div>`);
+    this.show(`<div class="sheet card"><div class="num">RISPOSTA N. ${String(n).padStart(3, '0')}</div><div style="margin-top:8px">${esc(r.name).toUpperCase()}</div>${row('CI SARÀ', r.coming ? 'SÌ' : 'NO')}${r.coming ? row('ALLERGIE', r.allergies || 'nessuna') + row('PAROLA BUFFA', r.word) : ''}${row('MSG', r.message)}<hr><div class="thanks">${r.coming ? 'grazie! a presto' : 'grazie lo stesso!'}</div><div class="mono" style="font-size:12px;color:#6A5A4A">Il tuo nome è sul televideo, pagina 600.</div></div>`);
   }
 
   calendar() {

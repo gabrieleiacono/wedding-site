@@ -49,6 +49,9 @@ body.focused .hot, body.focused #hint { display: none; }
 #remote { position: fixed; right: 16px; bottom: 76px; width: 220px; padding: 14px; border-radius: 26px; background: #2B2B2E; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5); display: flex; flex-direction: column; gap: 10px; }
 #remote[hidden] { display: none; }
 #remote-display { height: 36px; border-radius: 6px; background: #0A0A0A; color: #5CF27A; font: 700 18px 'IBM Plex Mono', monospace; letter-spacing: 3px; display: flex; align-items: center; justify-content: center; }
+#remote .disp-row { display: grid; grid-template-columns: 40px 1fr 40px; gap: 6px; }
+#remote .disp-row button { height: 36px; border: none; border-radius: 10px; background: #4A4A50; color: #F3EEE4; font: 700 13px 'IBM Plex Mono', monospace; cursor: pointer; }
+#remote .disp-row button:disabled { opacity: 0.3; cursor: default; }
 #remote .digits { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
 #remote .digits button, #remote .av-keys button { height: 40px; border: none; border-radius: 10px; background: #4A4A50; color: #F3EEE4; font: 700 15px 'IBM Plex Mono', monospace; cursor: pointer; }
 #remote button:active { transform: translateY(1px); background: #5A5A60; }
