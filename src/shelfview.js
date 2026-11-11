@@ -314,7 +314,8 @@ export class ShelfView {
       return { cover: true, side, L, up: 0.015 * hv, across: (0.5 - 0.3) * hv * A, b };
     }
     const L = Math.max(h / (0.31 * 2 * TAN), w / (0.56 * 2 * TAN * A)), hv = 2 * L * TAN, k = innerHeight / hv;
-    const centre = Math.min(innerHeight / 2, 116 + (h / 2) * k); // its top just under the buttons at the top
+    const below = matchMedia('(max-width: 640px)').matches ? 68 : 116; // the buttons at the top (one row on a phone, under the title wider)
+    const centre = Math.min(innerHeight / 2, below + (h / 2) * k); // its top just under them
     return { cover: true, side, L, up: (innerHeight / 2 - centre) / k, across: 0, b };
   }
   placeCard(place, b) {

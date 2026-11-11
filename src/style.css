@@ -26,10 +26,6 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: #1E1B16; col
 #title.stack .sep { display: none; }
 #title.stack .seg { display: block; }
 #title.off { visibility: hidden; }
-#compass { position: absolute; left: 50%; top: calc(16px + env(safe-area-inset-top, 0px)); transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 4px 6px; font-family: 'IBM Plex Mono', monospace; font-size: 12px; letter-spacing: 0.06em; }
-#compass button { width: 36px; height: 36px; border-radius: 50%; border: none; background: transparent; color: var(--hud-fg); font-size: 22px; cursor: pointer; line-height: 1; }
-#compass button:hover { background: rgba(255, 255, 255, 0.1); }
-#wall-name { min-width: 160px; text-align: center; padding: 4px 10px; border-radius: 999px; background: var(--accent); color: #fff; font-weight: 700; }
 #hint { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); transition: opacity 0.6s; }
 #corner { position: absolute; right: calc(16px + env(safe-area-inset-right, 0px)); bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 10px; }
 #back { position: absolute; left: calc(16px + env(safe-area-inset-left, 0px)); top: calc(64px + env(safe-area-inset-top, 0px)); }
@@ -136,9 +132,7 @@ body.focused .hot, body.focused #hint { display: none; }
 
 @media (max-width: 640px) {
   #title { display: none; }
-  #compass { top: calc(12px + env(safe-area-inset-top, 0px)); }
-  #wall-name { min-width: 0; white-space: nowrap; font-size: 11px; }
-  #compass { gap: 4px; }
+  #back { top: calc(12px + env(safe-area-inset-top, 0px)); } /* no title above it on a phone */
   #hint { bottom: 70px; }
   #remote { right: 50%; transform: translateX(50%); bottom: calc(62px + env(safe-area-inset-bottom, 0px)); width: min(340px, calc(100% - 32px)); padding: 10px; border-radius: 20px; gap: 8px; }
   #remote .fastext button { font-size: 10px; }
@@ -167,6 +161,7 @@ body.shelf #corner, body.shelf #hint { display: none; }
 .shelf-rows .btn:focus-visible { outline: 2px solid #fff; }
 #shelfui.out .shelf-scroll, #shelfui.out .shelf-hint { display: none; }
 @media (max-width: 700px) { .shelf-scroll { display: none; } .shelf-rows span { display: none; } }
+@media (max-width: 640px) { .shelf-rows { top: calc(12px + env(safe-area-inset-top, 0px)); } } /* level with #back */
 
 #bookcard { position: absolute; left: 50%; transform: translateX(-50%); width: min(600px, calc(100% - 24px)); overflow: auto; color: var(--ink);
   background: #F4EAD3 repeating-linear-gradient(transparent 0 27px, rgba(80, 110, 160, 0.26) 27px 28px); border-radius: 4px; box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);

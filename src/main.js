@@ -127,11 +127,9 @@ function updateLight() {
 }
 
 // --- camera rig ------------------------------------------------------------------------
-const WALLS = [
-  { yaw: 0, name: 'A · La scrivania' }, { yaw: -Math.PI / 2, name: 'B · Il televisore' },
-  { yaw: Math.PI, name: 'C · La libreria' }, { yaw: Math.PI / 2, name: 'D · La porta' },
-];
-// yaw/pitch is where you are looking; yawT/pitchT is where the drag (or a flick, or the compass) is
+// the four walls: A desk, B TV, C bookshelf, D door
+const WALLS = [{ yaw: 0 }, { yaw: -Math.PI / 2 }, { yaw: Math.PI }, { yaw: Math.PI / 2 }];
+// yaw/pitch is where you are looking; yawT/pitchT is where the drag (or a flick, or the arrow keys) is
 // taking you, and the view follows it a moment behind (see LOOK.ease).
 const rig = { yaw: 0, pitch: -0.15, yawT: 0, pitchT: -0.15, vyaw: 0, vpitch: 0, feel: 'mouse', targetYaw: null, home: null, dragging: false, focus: null, t: 0, from: null,
   lens: { fov: 60, cx: innerWidth / 2, cy: innerHeight / 2 }, peek: { yaw: 0, pitch: 0 }, peekS: { yaw: 0, pitch: 0 }, peeking: false, kbBottom: innerHeight };
@@ -183,7 +181,7 @@ function eyeAt(yaw, out = new THREE.Vector3()) {
   return out.set(cr(P(-1)[0], P(0)[0], P(1)[0], P(2)[0]), EYE.y, cr(P(-1)[1], P(0)[1], P(1)[1], P(2)[1]));
 }
 function lookDir(yaw, pitch) { return new THREE.Vector3(-Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), -Math.cos(yaw) * Math.cos(pitch)); }
-// the compass arrows and the arrow keys still step round to the next wall; dragging never does
+// the arrow keys step round to the next wall; dragging never does
 function turn(dir) { const w = nearestWall(); rig.targetYaw = w.yaw + dir * Math.PI / 2; rig.vyaw = 0; }
 function setFov() {
   const aspect = innerWidth / innerHeight;
@@ -242,7 +240,6 @@ function peekBy(dyaw, dpitch) {
   $('#hint').style.opacity = 0;
 }
 canvas.addEventListener('wheel', (e) => { if (shelfView.active) shelfView.wheel(e); }, { passive: false });
-$('#compass').addEventListener('click', (e) => { const b = e.target.closest('[data-turn]'); if (b) { sound.unlock(); unfocus(); turn(+b.dataset.turn); } });
 
 // --- close-ups ---------------------------------------------------------------------------
 // Each close-up names what has to be readable (a few world points), the direction you look at it
@@ -254,7 +251,9 @@ const narrowScreen = () => innerWidth < 700;
 const portrait = () => innerWidth < innerHeight;
 function freeBand({ keyboard = false } = {}) {
   const W = innerWidth, H = innerHeight;
-  const b = { left: 14, right: W - 14, top: narrowScreen() ? 112 : 74, bottom: H - 62 };
+  // on a phone (no title) Back sits in the top row; a little wider and it sits under the title
+  const top = matchMedia('(max-width: 640px)').matches ? 68 : narrowScreen() ? 112 : 74;
+  const b = { left: 14, right: W - 14, top, bottom: H - 62 };
   if (!remote.hidden) {
     const r = remote.getBoundingClientRect();
     if (narrowScreen()) b.bottom = Math.min(b.bottom, r.top - 10); else b.right = Math.min(b.right, r.left - 18);
@@ -583,9 +582,9 @@ let bookOut = 0, bookTarget = 0;
 function pullBook(on) { bookTarget = on ? 1 : 0; }
 
 $('#audio').addEventListener('click', () => { sound.unlock(); const on = sound.toggle(); $('#audio').setAttribute('aria-pressed', String(on)); $('#audio').setAttribute('aria-label', on ? 'Audio acceso' : 'Audio spento'); });
-// Top-left banner: one line when it fits beside the compass, stacked when it doesn't, hidden when even that collides.
+// Top-left banner: one line when it fits across the screen, stacked when it doesn't, hidden when even that is too wide.
 {
-  const title = $('#title'), compass = $('#compass');
+  const title = $('#title');
   const segs = [WEDDING.names, WEDDING.dateLong, `${WEDDING.villa} (${WEDDING.town})`];
   title.setAttribute('aria-label', segs.join(', '));
   segs.forEach((t, i) => {
@@ -595,13 +594,12 @@ $('#audio').addEventListener('click', () => { sound.unlock(); const on = sound.t
   const fitTitle = () => {
     title.classList.remove('stack', 'off');
     if (getComputedStyle(title).display === 'none') return;
-    const clear = () => title.getBoundingClientRect().right + 12 <= compass.getBoundingClientRect().left;
+    const clear = () => title.getBoundingClientRect().right + 16 <= innerWidth;
     if (clear()) return;
     title.classList.add('stack');
     if (!clear()) title.classList.add('off');
   };
   addEventListener('resize', fitTitle);
-  new ResizeObserver(fitTitle).observe(compass);
   document.fonts?.ready.then(fitTitle);
   fitTitle();
 }
@@ -700,7 +698,7 @@ function shadowsMoved() {
 }
 function drawFrame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
-  // free look: a turn you let go of coasts to a stop on its own; only the compass arrows aim at a wall
+  // free look: a turn you let go of coasts to a stop on its own; only the arrow keys aim at a wall
   if (!rig.dragging && rig.targetYaw !== null) {
     const d = wrap(rig.targetYaw - rig.yawT);
     rig.yawT += d * Math.min(1, dt * 3.2); // unhurried, so the walk round the room reads
@@ -742,7 +740,6 @@ function drawFrame(now) {
     rig.lens = { fov: rig.baseFov, cx: innerWidth / 2, cy: innerHeight / 2 };
   }
   applyLens(rig.lens);
-  $('#wall-name').textContent = nearestWall().name;
 
   // window life runs only when you can see it
   const facingNorth = rig.focus ? rig.focus.wall === 0 : Math.abs(wrap(rig.yaw)) < 1.25;
