@@ -2,7 +2,6 @@
 // Wall A (north): desk + window · B (east): TV · C (south): bookshelf · D (west): door, phone, calendar.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
-import { STORIES } from './content.js';
 import { buildSirio } from './phone.js';
 import { buildLamp } from './lamp.js';
 
@@ -226,18 +225,6 @@ function buildDesk(room, anchors) {
   }
   g.add(album);
   anchors.album = new THREE.Vector3(-0.47, top + 0.06, -1.42);
-
-  // five notebooks, desk right, stacked a bit crooked
-  const nb = new THREE.Group();
-  nb.position.set(0.45, top, -1.46);
-  STORIES.forEach((s, i) => {
-    const mat = makeInk({ color: s.color, wash: 0.72 });
-    const b = box(0.17, 0.011, 0.23, mat, (Math.random() - 0.5) * 0.02, 0.006 + i * 0.012, (Math.random() - 0.5) * 0.02, nb);
-    b.rotation.y = (Math.random() - 0.5) * 0.25;
-    box(0.08, 0.0005, 0.04, M.white, 0, 0.0058, -0.04, b);
-  });
-  g.add(nb);
-  anchors.notebooks = new THREE.Vector3(0.45, top + 0.07, -1.46);
 
   // the remote, near the edge
   const remote = new THREE.Group();

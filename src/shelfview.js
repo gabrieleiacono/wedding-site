@@ -12,14 +12,14 @@ const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<
 const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - (-2 * t + 2) ** 3 / 2;
 
 export class ShelfView {
-  constructor({ shelf, leggimi, sound }) {
-    this.s = shelf; this.leggimiMesh = leggimi; this.sound = sound;
+  constructor({ shelf, sound }) {
+    this.s = shelf; this.sound = sound;
     this.rows = shelf.rows;
     this.active = false;
     this.lean = { pos: new THREE.Vector3(), target: new THREE.Vector3(), fov: FOV };
     this.ri = 0; this.x = 0; this.tx = 0; this.y = 0; this.ty = 0; this.vis = VIS.base; this.tvis = VIS.base; this.vx = 0;
     this.pointers = new Map(); this.pinch = null;
-    this.pulled = null; this.onLeggimi = () => {};
+    this.pulled = null;
     this.buildUI();
     // the dim veil that drops behind a book you've taken out
     this.veil = new THREE.Mesh(new THREE.PlaneGeometry(8, 8), new THREE.MeshBasicMaterial({ color: '#140f0b', transparent: true, opacity: 0, side: THREE.DoubleSide }));
@@ -145,16 +145,15 @@ export class ShelfView {
     else return false;
     return true;
   }
-  /** A tap: take out the book under it (or open LEGGIMI). */
+  /** A tap: take out the book under it. */
   tap(ray) {
     if (this.pulled) {
       // a book that shows its cover turns over when you tap it
       if (this.pulled.mesh.userData.present && ray.intersectObject(this.pulled.mesh, true).length) this.flip();
       return true;
     }
-    const hit = ray.intersectObjects([...this.s.meshes, this.leggimiMesh], false)[0];
+    const hit = ray.intersectObjects(this.s.meshes, false)[0];
     if (!hit) return false;
-    if (hit.object === this.leggimiMesh) { this.onLeggimi(); return true; }
     const rec = this.s.bookAt(hit);
     if (rec) this.pull(rec);
     return !!rec;

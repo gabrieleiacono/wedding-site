@@ -1,5 +1,5 @@
 // "La causa dei vivi" by Anna Gabriella Rusconi (Cronache Ribelli, 2026): a friend's novel, standing
-// face-out on the shelf just right of LEGGIMI, its cover to the room. Its spine is drawn from the elements
+// face-out on the shelf, its cover to the room. Its spine is drawn from the elements
 // below (as on the real book: CRONACHE RIBELLI at the head, then title and author in gold Cinzel on matte
 // black). On the shelf and in the hand it is the same model, a proper paperback with flaps: two cover boards and a spine,
 // the red flaps folded inside them, a white page block with its edges, the real front cover and the six

@@ -1,6 +1,6 @@
 // Wall C (south): the bookshelf (design F5). Real books by the authors we love, in their Italian
 // editions (spines drawn by spines.js from books-data.js), the mini hi-fi, a tennis trophy, a globe,
-// and one glowing book, LEGGIMI, that pulls out. Some shelf space is kept free for records, CDs and
+// and a friend's novel standing face-out (the glowing LEGGIMI book lies on the desk: leggimi.js). Some shelf space is kept free for records, CDs and
 // tapes (anchors.reserved), to be filled later.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
@@ -48,29 +48,16 @@ export function buildBookshelf(room) {
 
   // --- the books, shuffled -------------------------------------------------------------------
   const books = shuffle(BOOKS.map(normalise).filter((b) => b.h < clear * 1000 - 8), SHUFFLE_SEED);
-  const leggimiBook = {
-    title: 'LEGGIMI', author: '', publisher: '', seed: 777, h: 270, t: 45, d: 210, binding: 'hardcover', age: 0.1, read: 0,
-    spine: {
-      bg: '#E3B04B', text_color: '#3A2410', accent: '#7A1F1A', title_orientation: 'up',
-      elements: [
-        { type: 'band', from: 0.04, to: 0.1, color: '#7A1F1A' }, { type: 'line', y: 0.115, thickness_mm: 0.8, color: '#3A2410' },
-        { type: 'line', y: 0.885, thickness_mm: 0.8, color: '#3A2410' }, { type: 'band', from: 0.9, to: 0.96, color: '#7A1F1A' },
-        { type: 'text', text: 'LEGGIMI', y: 0.18, y_to: 0.82, size_mm: 22, font: 'didone', weight: 700, color: '#3A2410', orientation: 'up', letter_spacing: 0.12 },
-        { type: 'dot', y: 0.07, size_mm: 3, color: '#E3B04B' }, { type: 'dot', y: 0.93, size_mm: 3, color: '#E3B04B' },
-      ],
-    },
-  };
-  const friend = friendBook(); // a friend's novel, standing face-out just right of LEGGIMI
+  const friend = friendBook(); // a friend's novel, standing face-out among the books
   const atlas = new SpineAtlas(books, 4096);
-  const lgAtlas = new SpineAtlas([leggimiBook], 1024);
-  const fontsReady = loadSpineFonts().then(() => { atlas.draw(); lgAtlas.draw(); whenCinzel(() => atlas.draw()); });
+  const fontsReady = loadSpineFonts().then(() => { atlas.draw(); whenCinzel(() => atlas.draw()); });
 
   // --- shelf plan, top row first, each row in the viewer's left-to-right order ----------------
   // The viewer's left bay is world +x. A part is books (flexible), an object, or space kept free.
   const PLAN = [
     [[['books']], [['books'], ['reserve', 'altro', 0.3]]],
     [[['globe', 0.55], ['books']], [['books']]],
-    [[['hifi', 0.45], ['reserve', 'cd', 0.48], ['books']], [['books'], ['leggimi'], ['friend'], ['books']]],
+    [[['hifi', 0.45], ['reserve', 'cd', 0.48], ['books']], [['books'], ['friend'], ['books']]],
     [[['books']], [['books']]],
     [[['reserve', 'cd', 0]], [['reserve', 'vhs', 0]]],
     [[['reserve', 'vinili', 0]], [['reserve', 'vinili', 0]]],
@@ -86,7 +73,7 @@ export function buildBookshelf(room) {
     const row = sh - 1 - k;
     bays.forEach((parts, vb) => {
       const bay = vb === 0 ? 1 : 0, [lo, hi] = bayEdges(bay);
-      const fixed = parts.reduce((s, p) => s + (p[0] === 'books' ? 0 : p[0] === 'leggimi' ? 0.06 : p[0] === 'friend' ? friendW : p[0] === 'reserve' ? (p[2] || 0) : p[1]), 0);
+      const fixed = parts.reduce((s, p) => s + (p[0] === 'books' ? 0 : p[0] === 'friend' ? friendW : p[0] === 'reserve' ? (p[2] || 0) : p[1]), 0);
       const flex = parts.filter((p) => p[0] === 'books').length;
       parts.forEach((p) => segs.push({ row, bay, lo, hi, p, cap: p[0] === 'books' ? (hi - lo - fixed) / flex : 0 }));
     });
@@ -188,16 +175,6 @@ export function buildBookshelf(room) {
       buildGlobe(xs - a, y); cursor.set(id, xs - a);
     } else if (kind === 'hifi') {
       buildHifi(xs - a, y); cursor.set(id, xs - a);
-    } else if (kind === 'leggimi') {
-      const t = 0.045, h = 0.27, d = 0.21;
-      const geo = new THREE.BoxGeometry(t, h, d); bookUV(geo, leggimiBook);
-      const glowMat = makeInk({ color: '#ffffff', map: lgAtlas.tex, emissiveMap: lgAtlas.tex, emissive: 0.8, emissiveColor: '#FFD27A', wash: 0.88, hatch: 0.4 });
-      const lx = xs - 0.0075 - t / 2;
-      const b = new THREE.Mesh(geo, glowMat); b.position.set(lx, y + h / 2, spineZ + d / 2); b.castShadow = true; g.add(b);
-      anchors.leggimi = b; anchors.leggimiRest = b.position.clone();
-      const light = new THREE.PointLight('#FFD27A', 0.25, 0.8, 2); light.position.set(lx, y + 0.2, front - 0.05); g.add(light);
-      anchors.leggimiLight = light;
-      cursor.set(id, xs - 0.06);
     } else if (kind === 'friend') {
       // face-out, as a bookshop shows a new book: upright, its front cover to the room, leaning back a
       // touch on a little black stand. It is its own model (cover art and all), not part of the row's meshes.

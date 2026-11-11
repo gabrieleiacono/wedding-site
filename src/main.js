@@ -5,6 +5,7 @@ import { buildRoom, EYE, ROOM, WINDOW } from './room.js';
 import { buildTV } from './tv.js';
 import { buildBookshelf } from './bookshelf.js';
 import { buildBike } from './bike.js';
+import { buildLeggimi } from './leggimi.js';
 import { ShelfView } from './shelfview.js';
 import { Typewriter } from './typewriter.js';
 import { Teletext } from './teletext.js';
@@ -60,7 +61,8 @@ const tv = buildTV(room, teletext);
 const shelf = buildBookshelf(room);
 const bike = buildBike(room);
 Object.assign(bike.hooks, { click: (d, v) => sound.ratchet(d, v), whirr: (v) => sound.whirr(v), snap: () => sound.snap(), clink: (d, v) => sound.clink(d, v) });
-const shelfView = new ShelfView({ shelf: shelf.shelf, leggimi: shelf.leggimi, sound });
+const leggimi = buildLeggimi(room); // the glowing book, on the desk right of the typewriter
+const shelfView = new ShelfView({ shelf: shelf.shelf, sound });
 const typewriter = new Typewriter(room, sound);
 const view = new Countryside(scene, sound);
 if (params.has('dusk')) view.fixedDusk = +params.get('dusk');
@@ -299,11 +301,9 @@ const WINDOW_LEAN = () => {
   return { pos: WINDOW_EYE, target: WINDOW_EYE.clone().add(lookDir(rig.peekS.yaw, -0.1 + rig.peekS.pitch)), fov: tall ? 74 : 62 };
 };
 const ALBUM_LEAN = () => frameView({ pts: around(anchors.album, 0.19, 0.03, 0.17), dir: elev(52, 0.25), fov: 45 });
-const NOTEBOOK_LEAN = () => frameView({ pts: around(anchors.notebooks, 0.12, 0.04, 0.15), dir: elev(52, -0.25), fov: 45 });
 const CAL_LEAN = () => frameView({ pts: around(anchors.calendar, 0.01, 0.26, 0.2), dir: new THREE.Vector3(-1, -0.04, 0), fov: 45 });
-const leggimiAt = shelf.leggimi.getWorldPosition(new THREE.Vector3());
-// LEGGIMI: the glowing book and its neighbours, so you see it come out of the row
-const LEGGIMI_LEAN = () => frameView({ pts: around(leggimiAt, 0.2, 0.2, 0.08), dir: new THREE.Vector3(0, -0.12, 1), fov: 45 });
+// LEGGIMI: over the desk, the book propped up with its cover to you
+const LEGGIMI_LEAN = () => frameView({ pts: around(leggimi.at.clone().add(new THREE.Vector3(0, 0.06, 0)), 0.13, 0.09, 0.15), dir: elev(45, -0.25), fov: 45 });
 const HIFI_LEAN = () => frameView({ pts: around(shelf.hifi.clone().add(new THREE.Vector3(0, -0.02, 0.12)), 0.27, 0.14, 0.11), dir: new THREE.Vector3(0.15, -0.2, 1), fov: 45 });
 
 // --- hotspots ----------------------------------------------------------------------------
@@ -312,15 +312,13 @@ const HOT = [
     lean: TYPEWRITER_LEAN, go: startTyping },
   { n: 2, id: 'album', title: 'Album fotografico', sub: 'Le nostre foto peggiori', at: anchors.album, wall: 0,
     lean: ALBUM_LEAN, go: () => overlays.album() },
-  { n: 3, id: 'notebooks', title: 'Quaderni', sub: 'La nostra storia, in cinque puntate', at: anchors.notebooks, wall: 0,
-    lean: NOTEBOOK_LEAN, go: () => overlays.notebooks() },
+  { n: 3, id: 'leggimi', title: 'LEGGIMI', sub: 'Un libro brilla sulla scrivania', at: leggimi.at, wall: 0,
+    lean: LEGGIMI_LEAN, go: () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); } },
   { n: 4, id: 'tv', title: 'Televisore · Televideo', sub: 'Tutte le informazioni, pagina per pagina', at: tv.screenWorld.clone().add(new THREE.Vector3(0, 0.3, 0)), wall: 1, lean: TV_LEAN, go: () => showRemote(true) },
   { n: 5, id: 'remote', title: 'Telecomando', sub: 'Accendi il televideo', at: anchors.remote, wall: 0, lean: TV_LEAN, go: () => { sound.tvClick(); showRemote(true); } },
   { n: 6, id: 'console', title: 'Console', sub: 'Passa su AV e gioca', at: tv.ps, wall: 1, lean: TV_LEAN, go: () => { teletext.setAV(true); showRemote(true); } },
-  { n: 7, id: 'leggimi', title: 'Libreria', sub: 'Un libro brilla: LEGGIMI', at: leggimiAt, wall: 2,
-    lean: LEGGIMI_LEAN, go: () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); } },
-  { n: 8, id: 'window', title: 'Finestra', sub: 'Alza la tapparella e affacciati', at: new THREE.Vector3(WINDOW.x1 - 0.3, 1.3, -ROOM.hz), wall: 0, lean: WINDOW_LEAN, peek: true, go: lookOut },
-  { n: 9, id: 'calendar', title: 'Calendario', sub: 'Quanto manca?', at: anchors.calendar, wall: 3,
+  { n: 7, id: 'window', title: 'Finestra', sub: 'Alza la tapparella e affacciati', at: new THREE.Vector3(WINDOW.x1 - 0.3, 1.3, -ROOM.hz), wall: 0, lean: WINDOW_LEAN, peek: true, go: lookOut },
+  { n: 8, id: 'calendar', title: 'Calendario', sub: 'Quanto manca?', at: anchors.calendar, wall: 3,
     lean: CAL_LEAN, go: () => overlays.calendar() },
   { n: '☎', id: 'phone', title: 'Telefono', sub: 'Domande frequenti', at: anchors.phone, wall: 3, lean: TV_LEAN, go: () => { teletext.go('700'); showRemote(true); } },
   { n: '♪', id: 'hifi', title: 'Mini hi-fi', sub: 'La playlist', at: shelf.hifi, wall: 2, lean: HIFI_LEAN, go: () => overlays.playlist() },
@@ -331,7 +329,6 @@ const shelfHot = HOT.find((h) => h.id === 'shelf');
 const windowGroup = anchors.shutter.shutter.parent;
 let shelfAsk = { ri: 0, x: null }; // which shelf the close-up opens on: the top one, unless you tapped a book
 function enterShelf(ri = 1, x = null) { shelfAsk = { ri, x }; activate(shelfHot); }
-shelfView.onLeggimi = () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); };
 const hotWrap = $('#hotspots');
 for (const h of HOT) {
   const b = document.createElement('button');
@@ -357,7 +354,7 @@ function focus(h) {
   rig.peek.yaw = rig.peek.pitch = rig.peekS.yaw = rig.peekS.pitch = 0;
   document.body.classList.add('focused');
   $('#back').hidden = false;
-  view.leaning = ['typewriter', 'album', 'notebooks', 'window'].includes(h.id);
+  view.leaning = ['typewriter', 'album', 'leggimi', 'window'].includes(h.id);
 }
 function unfocus(quick) {
   if (!rig.focus) return;
@@ -377,10 +374,10 @@ function unfocus(quick) {
   if (h.id === 'typewriter') stopTyping();
   if (['tv', 'remote', 'console', 'phone'].includes(h.id)) showRemote(false);
   if (h.id === 'leggimi') pullBook(false);
-  if (h.id === 'shelf') { shelfView.leave(); pullBook(false); }
+  if (h.id === 'shelf') shelfView.leave();
 }
 $('#back').addEventListener('click', () => unfocus());
-overlays.onClose = () => { if (shelfView.active) pullBook(false); else unfocus(); };
+overlays.onClose = () => { if (!shelfView.active) unfocus(); };
 
 function clickAt(x, y) {
   const ndc = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
@@ -727,9 +724,7 @@ function drawFrame(now) {
   bike.tick(now);
   shutter += (shutterTarget - shutter) * Math.min(1, dt * 2.2); layoutShutter();
   bookOut += (bookTarget - bookOut) * Math.min(1, dt * 6);
-  shelf.leggimi.position.z = shelf.leggimiRest.z - bookOut * 0.14;
-  shelf.leggimi.material.emissiveIntensity = 0.55 + Math.sin(now / 600) * 0.25;
-  shelf.leggimiLight.intensity = 0.2 + Math.sin(now / 600) * 0.08;
+  leggimi.tick(now, bookOut);
   if (Math.floor(now / 60000) !== drawFrame.min) { drawFrame.min = Math.floor(now / 60000); cal.draw(); }
 
   post.mat.uniforms.uTime.value = now / 1000;

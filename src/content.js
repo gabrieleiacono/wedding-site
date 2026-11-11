@@ -91,7 +91,8 @@ export const PHOTOS = [
   { caption: '[noi, adesso]', src: null },
 ];
 
-// Five notebooks, one story each (≤ 250 words). Colours match the notebook covers.
+// Five short stories (≤ 250 words each), once the notebooks on the desk. The notebooks made room for
+// LEGGIMI and nothing in the room opens these now (overlays.notebooks() still can), kept for another home.
 export const STORIES = [
   { title: 'Come ci siamo conosciuti', color: '#3E6B4A', body: 'C\'era una volta [...]\n\n[La vostra storia, scritta da voi, massimo 250 parole.]' },
   { title: 'Modica–Darfo, andata e ritorno', color: '#C9A44C', body: '1.073 chilometri in linea d\'aria [...]\n\n[Da scrivere.]' },
@@ -100,7 +101,7 @@ export const STORIES = [
   { title: 'La proposta', color: '#ECE5D6', body: '[Da scrivere.]' },
 ];
 
-// The glowing "LEGGIMI" book on the shelf.
+// The glowing "LEGGIMI" book on the desk.
 export const LEGGIMI = {
   title: 'Leggimi',
   body: 'Benvenuti nell’anticamera del nostro matrimonio! Questo è un luogo virtuale per prepararci insieme a questo magico avvenimento. Non siate timidi e interagite con gli oggetti della stanza.\nLa macchina da scrivere serve per confermare la vostra partecipazione, mentre il televisore è sintonizzato su un televideo pieno zeppo di informazioni utili.\n\nIn questa libreria ci sono alcuni degli autori che amiamo di più e anche qualche piccolo easter egg, sentitevi liberi di spulciarla :)',
@@ -124,7 +125,7 @@ export const BOOK_NOTES = {
   // 'Le città invisibili': '[Perché è qui, in una o due righe]',
 };
 
-// A friend's novel, standing face-out on the shelf just right of LEGGIMI. Taken out, it turns to show its cover
+// A friend's novel, standing face-out on the third shelf, right-hand side. Taken out, it turns to show its cover
 // (tap it, or "Giralo", for the back) and its card links to the publisher's page, where it can be bought.
 // The book itself (cover art, spine, flaps) is drawn in src/friendbook.js.
 export const FRIEND_BOOK = {
