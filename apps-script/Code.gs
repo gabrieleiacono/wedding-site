@@ -12,7 +12,8 @@ function sheet_() {
 
 function doPost(e) {
   const r = JSON.parse(e.postData.contents);
-  const clean = (v, n) => String(v ?? '').slice(0, n);
+  // A leading ' keeps the cell plain text, so an answer starting with = + - @ is never run as a formula.
+  const clean = (v, n) => String(v ?? '').slice(0, n).replace(/^(?=[=+\-@])/, "'");
   sheet_().appendRow([new Date(), clean(r.name, 80), r.coming ? 'SI' : 'NO', Number(r.count) || 0, clean(r.allergies, 200), clean(r.word, 200), clean(r.message, 500)]);
   return ContentService.createTextOutput(JSON.stringify({ ok: true })).setMimeType(ContentService.MimeType.JSON);
 }

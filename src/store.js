@@ -4,7 +4,7 @@
 //  3. This browser only (localStorage), so the page still works offline / locally.
 // Every backend exposes the same two calls: add(record) and onGuests(callback).
 
-export const SHEET_URL = ''; // e.g. 'https://script.google.com/macros/s/XXXX/exec'
+export const SHEET_URL = 'https://script.google.com/macros/s/AKfycbw77WXfX1U8NZzsUIQ_Op0M3jJ_MmriFENLOirrtGVxqYUKBIwMkYm6rV14EyJhzkY1eg/exec';
 
 const LOCAL_KEY = 'scrittoio-rsvps';
 
