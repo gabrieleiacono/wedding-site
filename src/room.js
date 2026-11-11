@@ -32,7 +32,6 @@ export const M = {
   albumRed: makeInk({ color: '#8A2E2A', wash: 0.75 }),
   blue: makeInk({ color: '#2F4F6E', wash: 0.7 }),
   green: makeInk({ color: '#3E6B4A', wash: 0.7 }),
-  plant: makeInk({ color: '#4E7A3A', wash: 0.75 }),
   cork: makeInk({ color: '#B88A55', wash: 0.65 }),
   shutter: makeInk({ color: '#D8CDB8', wash: 0.5, spacing: 0.006 }),
   curtain: makeInk({ color: '#FBF4E6', wash: 0.2, transparent: true, opacity: 0.3, side: THREE.DoubleSide, emissive: 0.35, emissiveColor: '#FFE2C0' }),

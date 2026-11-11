@@ -1,10 +1,11 @@
 // Wall B (east): 32" flat-glass CRT on a black cabinet, VCR blinking 12:00, the grey console (console.js),
-// VHS tapes, a potted plant and a wall clock (design F4).
+// VHS tapes, a prickly pear in a pot (ficodindia.js) and a wall clock (design F4).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk, makeScreen } from './ink.js';
 import { M, box, cyl, slab, ROOM, roundedShape, extrude } from './room.js';
 import { merge } from './geo.js';
 import { buildConsole } from './console.js';
+import { buildPricklyPear } from './ficodindia.js';
 
 export function buildTV(room, teletext) {
   const g = new THREE.Group(); room.add(g);
@@ -107,17 +108,8 @@ export function buildTV(room, teletext) {
   box(0.004, 0.13, 0.008, M.black, 0, 0.065, 0, minHand);
   hourHand.position.x = -0.02; minHand.position.x = -0.024; clock.add(hourHand, minHand);
 
-  // potted plant on the floor just left (north) of the cabinet
-  const pz = z - cw / 2 - 0.27;
-  const pot = cyl(0.13, 0.1, 0.24, M.red, x - 0.25, 0.12, pz, g);
-  for (let i = 0; i < 9; i++) {
-    const leaf = new THREE.Mesh(new THREE.SphereGeometry(0.11, 8, 6), M.plant);
-    leaf.scale.set(0.3, 1, 0.5);
-    const a = i / 9 * Math.PI * 2;
-    leaf.position.set(x - 0.25 + Math.cos(a) * 0.1, 0.38 + (i % 3) * 0.08, pz + Math.sin(a) * 0.1);
-    leaf.rotation.set(Math.sin(a) * 0.6, 0, Math.cos(a) * 0.6);
-    leaf.castShadow = true; g.add(leaf);
-  }
+  // the ficu d'India (prickly pear) in its terracotta pot, on the floor just left (north) of the cabinet
+  const plant = buildPricklyPear(); plant.position.set(x - 0.25, 0, z - cw / 2 - 0.27); g.add(plant);
 
   // the set itself (body, screen, bezel, antenna): a tap on it zooms in on the teletext
   const isTV = (o) => { for (; o; o = o.parent) if (o === tv) return true; return false; };
