@@ -199,3 +199,11 @@ body.shelf #corner, body.shelf #hint { display: none; }
 .boot-msg .acts { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .boot-msg .why { font: 12px/1.4 'IBM Plex Mono', monospace; color: #6A5A4A; overflow-wrap: anywhere; }
 .boot-msg.slow { font-size: 14px; }
+
+/* the bar under "Sto disegnando la stanza…": a pen-drawn box that fills with hatching as the room
+   gets built (bootProgress in index.html). The hatching is fixed; a strip of paper slides off it to the
+   right, by transform only, so the browser can keep it moving while the page is busy building. */
+.boot-bar { position: relative; width: min(240px, 64vw); height: 14px; border: 2px solid var(--ink); overflow: hidden;
+  border-radius: 255px 12px 225px 12px / 12px 225px 12px 255px; transform: rotate(-0.6deg);
+  background: repeating-linear-gradient(-55deg, var(--ink) 0 1.6px, transparent 1.6px 5px); }
+.boot-bar i { position: absolute; inset: 0; background: #F7EEDC; transform: translateX(0%); will-change: transform; }

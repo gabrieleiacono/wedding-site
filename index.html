@@ -51,7 +51,55 @@
 
 <input id="typer" autocomplete="off" autocapitalize="characters" spellcheck="false" aria-label="Tastiera della macchina da scrivere">
 
-<div id="loading"><span>Sto disegnando la stanza…</span></div>
+<div id="loading"><span>Sto disegnando la stanza…</span><div class="boot-bar" role="progressbar" aria-label="La stanza si sta disegnando" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div></div>
+<script>
+  // The progress bar under the loading line. window.bootProgress(p, next, ms) is called by main.js as
+  // the room gets built: p is how far it has got (0…1); next and ms say where the step starting now
+  // will end and about how long it should take on this device, and the bar creeps towards it on its own
+  // (a transform animation, which the browser runs even while that step keeps the page busy). It never
+  // goes back. Before main.js runs, the bar follows the scripts coming down.
+  (function () {
+    var l = document.getElementById('loading'), bar = l.querySelector('.boot-bar'), cover = bar.firstChild;
+    var at = 0, anim = null, started = false;
+    var now = function () { // where the bar is right now, mid-animation included
+      var m = getComputedStyle(cover).transform, w = bar.clientWidth;
+      if (!w || !m || m === 'none') return at;
+      var px = new DOMMatrix(m).m41; return Math.max(at, Math.min(1, px / w));
+    };
+    var move = function (p, next, ms) {
+      p = Math.max(now(), Math.min(1, p));
+      if (anim) anim.cancel();
+      cover.style.transform = 'translateX(' + p * 100 + '%)'; at = p;
+      bar.setAttribute('aria-valuenow', Math.round(p * 100));
+      if (next > p && ms > 0 && cover.animate) {
+        // ease out towards nine tenths of the way, so a slow step looks slow but never looks finished
+        var to = p + (next - p) * 0.9;
+        anim = cover.animate([{ transform: 'translateX(' + p * 100 + '%)' }, { transform: 'translateX(' + to * 100 + '%)' }],
+          { duration: ms * 1.6, easing: 'cubic-bezier(0.2, 0.7, 0.4, 1)', fill: 'forwards' });
+      }
+    };
+    window.bootProgress = function (p, next, ms) {
+      started = true; try { move(p, next, ms); } catch (e) {} // a bar that can't draw must never stop the room
+      // let the page paint the bar (and hand the animation over) before the next step takes the page;
+      // in a tab opened in the background nothing is painted, so carry straight on there
+      return new Promise(function (r) {
+        var go = function () { if (r) { var f = r; r = null; setTimeout(f, 0); } };
+        if (document.hidden) { var c = new MessageChannel(); c.port1.onmessage = function () { var f = r; r = null; f && f(); }; c.port2.postMessage(0); }
+        else { requestAnimationFrame(go); setTimeout(go, 120); }
+      });
+    };
+    // the scripts: about 1.5 MB of them (three.js, the room, the books), the first 15% of the bar
+    var SCRIPTS = 1.5e6, got = 0, DL = 0.15;
+    try {
+      move(0, DL * 0.5, 2500);
+      new PerformanceObserver(function (list) {
+        if (started) return;
+        list.getEntries().forEach(function (e) { if (/\.js(\?|$)/.test(e.name)) got += e.decodedBodySize || 0; });
+        try { move(DL * Math.min(1, got / SCRIPTS), DL, 1500); } catch (e) {}
+      }).observe({ type: 'resource', buffered: true });
+    } catch (e) {}
+  })();
+</script>
 <script>
   // If the room can't be drawn, say so on the loading screen, in words a guest can act on, with a way
   // through (try again, or the plain facts page) instead of waiting there for ever. The technical reason

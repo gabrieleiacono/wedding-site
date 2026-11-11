@@ -17,7 +17,12 @@ import { WEDDING } from './content.js';
 
 const $ = (s) => document.querySelector(s);
 const params = new URLSearchParams(location.search);
+// the progress bar on the loading screen (index.html): each step says how far the room has got and
+// where the next step will take it; `speed` is how much slower than a fast laptop this device builds
+const boot = window.bootProgress || (() => Promise.resolve());
+let speed = 1;
 
+await boot(0.15, 0.18, 1500);
 await Promise.race([
   Promise.all(['700 22px "IBM Plex Mono"', '400 20px "Courier Prime"', '700 20px Caveat', '800 30px "Bricolage Grotesque"'].map((f) => document.fonts.load(f))),
   new Promise((r) => setTimeout(r, 2500)),
@@ -55,10 +60,15 @@ const store = createStore();
 const overlays = new Overlays();
 
 // --- the room --------------------------------------------------------------------
+await boot(0.18, 0.22, 300);
+let bootT = performance.now();
 const { room, anchors } = buildRoom(scene);
 const teletext = new Teletext(store);
 const tv = buildTV(room, teletext);
+speed = Math.min(8, Math.max(0.5, (performance.now() - bootT) / 110));
+await boot(0.22, 0.55, 4800 * speed); // the bookshelf is the long one: every spine is drawn by hand
 const shelf = buildBookshelf(room);
+await boot(0.55, 0.66, 450 * speed);
 const bike = buildBike(room);
 Object.assign(bike.hooks, { click: (d, v) => sound.ratchet(d, v), whirr: (v) => sound.whirr(v), snap: () => sound.snap(), clink: (d, v) => sound.clink(d, v) });
 const leggimi = buildLeggimi(room); // the glowing book, on the desk right of the typewriter
@@ -69,6 +79,7 @@ if (params.has('dusk')) view.fixedDusk = +params.get('dusk');
 const cal = calendarTexture();
 const calFace = new THREE.Mesh(new THREE.PlaneGeometry(0.32, 0.44), makeScreen(cal.tex));
 calFace.position.set(0.004, 0, 0); calFace.rotation.y = Math.PI / 2; anchors.calendarGroup.add(calFace);
+await boot(0.66, 0.7, 100 * speed);
 
 // --- light: low sun through the window, sky fill, desk lamp, TV glow -----------------
 const hemi = new THREE.HemisphereLight('#F4D2B0', '#6A4A3A', 1.0);
@@ -747,7 +758,16 @@ function placeHotspots() {
     if (on) { h.el.style.left = x + 'px'; h.el.style.top = y + 'px'; h.el.classList.toggle('flip', x > innerWidth - 300); }
   }
 }
-requestAnimationFrame((t) => { last = t; setTimeout(() => $('#loading').classList.add('gone'), 200); frame(t); });
+// Compile every shader before the first frame, where the browser can do it without stopping the page
+// (so the bar keeps going); the first frame then has less to do. Drawn into the post pass's target,
+// as the first frame will be, so the compiled programs are the ones it uses.
+await boot(0.7, 0.93, 2500 * speed);
+try {
+  renderer.setRenderTarget(post.rtColor);
+  await Promise.race([renderer.compileAsync(scene, camera), new Promise((r) => setTimeout(r, 12000))]);
+} catch (e) { console.warn('shader warm-up skipped', e); } finally { renderer.setRenderTarget(null); }
+await boot(0.93, 0.99, 1500 * speed);
+requestAnimationFrame((t) => { last = t; setTimeout(() => { boot(1); $('#loading').classList.add('gone'); }, 200); frame(t); });
 // ?cam=x,y,z,tx,ty,tz[,fov] parks the camera anywhere (for screenshots while modelling)
 if (params.has('cam')) {
   const v = params.get('cam').split(',').map(Number);
