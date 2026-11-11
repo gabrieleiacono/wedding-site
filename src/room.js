@@ -256,6 +256,7 @@ function buildDesk(room, anchors) {
   g.add(lamp.group); lamp.group.updateMatrixWorld(true);
   anchors.lampBulb = lamp.group.localToWorld(lamp.bulb.clone());
   anchors.lampGlow = lamp.setGlow;
+  anchors.lampGroup = lamp.group; // a click on it turns it on and off (main.js)
 
   // pen cup with pencils
   cyl(0.035, 0.032, 0.1, M.red, 0.62, top + 0.05, -1.7, g);

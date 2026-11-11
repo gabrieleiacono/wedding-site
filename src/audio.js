@@ -104,6 +104,14 @@ export class Sound {
     const base = 2200 + Math.random() * 1800;
     for (const [m, k] of [[1, 0.5], [1.52, 0.3], [2.31, 0.18]]) { const o = this.ctx.createOscillator(); o.frequency.value = base * m; this.env(o, t, 0.0008, v * k * 0.5, 0.05 + 0.08 * strength); o.start(t); o.stop(t + 0.2); }
   }
+  // the brass turn-switch under the lamp's shade: a short dry double click
+  lampSwitch() {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    for (const [dt, v] of [[0, 0.5], [0.035, 0.3]]) {
+      const n = this.noise(0.02); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 3200; f.Q.value = 2;
+      n.connect(f); this.env(f, t + dt, 0.001, v, 0.018); n.start(t + dt);
+    }
+  }
   tvClick() {
     if (!this.ok) return; const t = this.ctx.currentTime;
     const n = this.noise(0.03); this.env(n, t, 0.001, 0.4, 0.03); n.start(t);

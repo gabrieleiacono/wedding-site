@@ -81,6 +81,14 @@ scene.add(sun, sun.target);
 const lamp = new THREE.PointLight('#FFD9A0', 0, 2.6, 1.8);
 lamp.position.copy(anchors.lampBulb);
 scene.add(lamp);
+// The lamp comes on by itself at the blue hour; a click on it turns it on or off by hand, and from
+// then on it stays as you left it. lampK fades towards where it should be, like a bulb warming up.
+const lampState = { hand: null, k: 0, t: performance.now() };
+const isLamp = (o) => { for (; o; o = o.parent) if (o === anchors.lampGroup) return true; return false; };
+function toggleLamp() {
+  lampState.hand = lampState.k < 0.5;
+  sound.lampSwitch();
+}
 
 function updateLight() {
   const dusk = view.dusk; // 0 hero bake … 1 blue hour
@@ -91,7 +99,11 @@ function updateLight() {
   sun.color.set('#FFC88A').lerp(new THREE.Color('#F08A7A'), dusk);
   hemi.intensity = 1.0 - dusk * 0.35;
   hemi.color.set('#F4D2B0').lerp(new THREE.Color('#8A86B8'), dusk);
-  const lampOn = THREE.MathUtils.smoothstep(dusk, 0.35, 0.8);
+  const now = performance.now(), dt = Math.min(0.1, (now - lampState.t) / 1000); lampState.t = now;
+  const auto = THREE.MathUtils.smoothstep(dusk, 0.35, 0.8);
+  const want = lampState.hand === null ? auto : lampState.hand ? 1 : 0;
+  lampState.k = lampState.hand === null ? auto : lampState.k + (want - lampState.k) * (1 - Math.exp(-dt * 14));
+  const lampOn = lampState.k;
   lamp.intensity = lampOn * 0.9;
   anchors.lampGlow(lampOn);
   tv.glow.intensity = 0.1 + dusk * 0.3;
@@ -384,6 +396,8 @@ function clickAt(x, y) {
   if (hitRoom && bike.isBike(hitRoom.object)) { bike.tap(); return; }
   // a tap on the TV set itself zooms in on the teletext, like its hotspot
   if (hitRoom && tv.isTV(hitRoom.object)) { activate(HOT.find((h) => h.id === 'tv')); return; }
+  // a tap on the lamp turns it on or off
+  if (hitRoom && isLamp(hitRoom.object)) { toggleLamp(); return; }
   // otherwise: the nearest hotspot on screen within reach
   let best = null, bd = 90;
   for (const h of HOT) { if (!h.screen) continue; const d = Math.hypot(h.screen.x - x, h.screen.y - y); if (d < bd) { bd = d; best = h; } }

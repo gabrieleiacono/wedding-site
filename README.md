@@ -9,6 +9,7 @@ Turn around the room; every piece of wedding information lives in an object.
 - **Bookshelf**: 383 real books in their Italian editions. Tap a book (or the Aa hotspot) to get close to a shelf: drag along it, ▲▼ to change shelf, author chips to jump, pinch or wheel to zoom. Tap a book to take it out and read its library card. The glowing LEGGIMI book, the hi-fi playlist. Just right of LEGGIMI a friend's novel, *La causa dei vivi* (Anna Gabriella Rusconi, Cronache Ribelli), stands face-out on a little stand: taken out, it turns to show its cover (tap it to turn it over) and its card links to the publisher's page
 - **Bike**: a yellow Wheeler 2100 in the corner between the TV and the shelf. Tap it, the pedals above all, and the pedals get a push backwards (one tap = one turn), clicking like a freewheel at exactly the speed they turn; taps add up. Tap it faster than 5 a second (8 taps within 1.5 s) and the chain falls off the ring, for good until the page is reloaded.
 - **Window**: living landscape (trains on the viaduct, donkeys and foals, rooster, swallows); pull the shutter strap
+- **Lamp**: comes on by itself at the blue hour; click it to turn it on or off.
 - **Calendar**: countdown. **Phone**: FAQ.
 - `facts.html`: "Solo i fatti", a plain text version of everything.
 
@@ -54,7 +55,7 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/creatures.js` | Articulated donkeys, foals, rooster and swallows, with their little behaviours |
 | `src/typewriter-model.js` | The detailed electronic typewriter (keys, legends, LCD, paper slot) |
 | `src/phone.js` | The Sirio-style desk phone with its keypad and coiled cord |
-| `src/lamp.js` | The desk lamp: a Caltagirone majolica baluster with a pleated linen shade that glows at the blue hour |
+| `src/lamp.js` | The desk lamp: a Caltagirone majolica baluster with a pleated linen shade that glows at the blue hour; a click on it turns it on or off (main.js, `toggleLamp`) |
 | `src/bike.js` | The 1990s Wheeler 2100 Pro Line in neon yellow, between the TV and the bookshelf: frame paint (splatter and decals) drawn into one texture, every other fixed part merged into one mesh, spokes as lines; the crank set, the two pedals and the chain are their own meshes so a tap can push them round, and the chain is a rope that can fall off (the constants for the push, the friction and the spam limit are at the top of the file) |
 | `src/geo.js` | Noise and geometry helpers shared by the landscape and the animals |
 | `src/overlays.js` | Album, notebooks, cards, calendar, credits |
