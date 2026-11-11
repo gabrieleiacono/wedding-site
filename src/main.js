@@ -65,6 +65,7 @@ await boot(0.18, 0.22, 300);
 let bootT = performance.now();
 const { room, anchors } = buildRoom(scene);
 const teletext = new Teletext(store);
+teletext.touch = matchMedia('(hover: none)').matches;
 const tv = buildTV(room, teletext);
 speed = Math.min(8, Math.max(0.5, (performance.now() - bootT) / 110));
 await boot(0.22, 0.55, 4800 * speed); // the bookshelf is the long one: every spine is drawn by hand
@@ -304,8 +305,11 @@ const TYPEWRITER_LEAN = () => {
   return { pos: v.pos, target: typing, fov, cx: v.cx, cy: kb.top + (kb.bottom - kb.top) * 0.64 };
 };
 // TV: the whole screen, beside the remote on a desk, above it on a phone.
-const TV_PTS = around(tv.screenWorld, 0.01, 0.27, 0.35);
-const TV_LEAN = () => frameView({ pts: TV_PTS, dir: new THREE.Vector3(1, -0.07, 0), fov: portrait() ? 55 : 40, fill: 0.88 });
+// On a narrow phone the screen is as wide as the page allows (the bezel just shows), since the width is what limits it.
+const TV_PTS = around(tv.screenWorld, 0.01, 0.27, 0.35), TV_PTS_TIGHT = around(tv.screenWorld, 0.01, 0.255, 0.338);
+const TV_LEAN = () => narrowScreen()
+  ? frameView({ pts: TV_PTS_TIGHT, dir: new THREE.Vector3(1, -0.07, 0), fov: portrait() ? 55 : 40, fill: 1 })
+  : frameView({ pts: TV_PTS, dir: new THREE.Vector3(1, -0.07, 0), fov: portrait() ? 55 : 40, fill: 0.88 });
 // Window: your face right at the open window, in the frame itself (still this side of the shutter's
 // guides), so the country fills the picture; drag or use the arrows to look along the hills or down
 // into the paddock. A wider lens on a tall phone screen.
@@ -402,6 +406,8 @@ function clickAt(x, y) {
   const hitRoom = ray.intersectObject(room, true).find((h) => shown(h.object));
   if (view.group.visible && view.pick(ray, hitRoom ? hitRoom.distance : Infinity)) return;
   if (shelfView.active) { if (!shelfView.multi) shelfView.tap(ray); return; }
+  // in front of the TV, a tap on the screen turns to the next subpage (back to the first after the last)
+  if (rig.focus?.lean === TV_LEAN && !teletext.av && ray.intersectObject(tv.screen).length && teletext.subCount() > 1) { sound.tvClick(); teletext.step(1); return; }
   if (rig.focus) return;
   // a tap on the bike (the pedals above all) pushes the pedals back, freewheeling; too many, too fast, and the chain comes off
   if (hitRoom && bike.isBike(hitRoom.object)) { bike.tap(); return; }
@@ -486,6 +492,9 @@ function setPad(open) {
 }
 padToggle.addEventListener('click', () => { sound.tvClick(); setPad(!remote.classList.contains('pad-open')); });
 remote.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => { sound.tvClick(); teletext.step(+b.dataset.sub); }));
+// SIZE, as on a real remote: on a phone it redraws the body of the pages in bigger letters (CSS shows it only there)
+const sizeKey = remote.querySelector('.size-key');
+sizeKey.addEventListener('click', () => { sound.tvClick(); teletext.setBig(!teletext.big); });
 const FASTC = [['#E8261C', '#fff'], ['#1FCF3A', '#000'], ['#FFE81A', '#000'], ['#2BD9F2', '#000']];
 function refreshRemote() {
   const f = remote.querySelector('.fastext'); f.innerHTML = '';
@@ -498,6 +507,10 @@ function refreshRemote() {
   });
   remote.querySelector('.av-keys').hidden = !teletext.av;
   remote.querySelectorAll('[data-sub]').forEach((b) => { b.disabled = teletext.subCount() < 2; });
+  // ▶ lights up while the page has more subpages to read
+  const sp = teletext.subPos();
+  remote.querySelector('[data-sub="1"]').classList.toggle('more', !teletext.buf && sp.n > 1 && !sp.auto && sp.i < sp.n - 1);
+  sizeKey.setAttribute('aria-pressed', teletext.big);
   $('#remote-display').textContent = teletext.av ? 'AV1' : 'P' + (teletext.buf ? (teletext.buf + '___').slice(0, 3) : teletext.page === 'none' ? teletext.missing : teletext.page);
 }
 teletext.onChange = refreshRemote;
@@ -506,7 +519,7 @@ function showRemote(on) {
   if (!on) setPad(false);
   $('#help').hidden = !on;
   // a phone has room for one short line under the remote, and no keyboard to type on
-  if (on) $('#help').textContent = getComputedStyle(padToggle).display !== 'none' ? 'Tasti colorati o 123 per cambiare pagina' : 'Digita tre cifre (anche da tastiera) · i tasti colorati portano alle pagine';
+  if (on) $('#help').textContent = getComputedStyle(padToggle).display !== 'none' ? 'Colori o 123 per le pagine · A+ testo grande' : 'Digita tre cifre (anche da tastiera) · i tasti colorati portano alle pagine';
 }
 remote.querySelectorAll('[data-av]').forEach((b) => {
   const v = +b.dataset.av;

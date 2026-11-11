@@ -61,10 +61,14 @@ body.focused .hot, body.focused #hint { display: none; }
 #remote .av-keys[hidden] { display: none; }
 /* On a phone (or a short landscape screen) the number pad folds away while you read: the page display with
    ◀ ▶, the coloured keys and 123 (which opens the pad) stay, and the TV gets the room the pad took. */
-#remote .pad-toggle { display: none; }
+#remote .disp-row button.more { background: #FFE81A; color: #1A1A1A; animation: more-pulse 1.6s ease-in-out infinite; }
+@keyframes more-pulse { 50% { box-shadow: 0 0 0 4px rgba(255, 232, 26, 0.35); } }
+@media (prefers-reduced-motion: reduce) { #remote .disp-row button.more { animation: none; } }
+#remote .pad-toggle, #remote .size-key { display: none; }
 @media (max-width: 700px), (max-height: 520px) {
-  #remote .disp-row { grid-template-columns: 40px 1fr 40px 52px; }
-  #remote .pad-toggle { display: block; letter-spacing: 1px; }
+  #remote .disp-row { grid-template-columns: 40px 1fr 40px 44px 52px; }
+  #remote .pad-toggle, #remote .size-key { display: block; letter-spacing: 1px; }
+  #remote .size-key[aria-pressed="true"] { background: #F3EEE4; color: #2B2B2E; }
   #remote .pad-toggle[aria-expanded="true"] { background: #F3EEE4; color: #2B2B2E; }
   #remote:not(.pad-open) .digits { display: none; }
 }
