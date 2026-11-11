@@ -1,14 +1,15 @@
 // Wall C (south): the bookshelf (design F5). Real books by the authors we love, in their Italian
 // editions (spines drawn by spines.js from books-data.js), a tennis trophy, a 1:12 model
-// of a classic Mini (mini.js) and a friend's novel standing face-out (the glowing LEGGIMI book lies on
-// the desk: leggimi.js). Some shelf space is kept free for records, CDs and
-// tapes (anchors.reserved), to be filled later.
+// of a classic Mini (mini.js), a tennis bag on a low shelf (tennisbag.js) and a friend's novel
+// standing face-out (the glowing LEGGIMI book lies on the desk: leggimi.js). Some shelf space is
+// kept free for records, CDs and tapes (anchors.reserved), to be filled later.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { M, box, cyl, ROOM } from './room.js';
 import { BOOKS } from './books-data.js';
 import { SpineAtlas, bookUV, rng, hashStr, loadSpineFonts, applySeries } from './spines.js';
 import { buildMini } from './mini.js';
+import { buildTennisBag } from './tennisbag.js';
 import { friendBook, buildFriendBook, preloadFriendCover, whenCinzel } from './friendbook.js';
 
 // The books stand in a shuffled order, not by author: the same order for every visitor, picked by
@@ -65,7 +66,7 @@ export function buildBookshelf(room) {
     [[['mini', 0.55], ['books']], [['books']]],
     [[['books'], ['reserve', 'cd', 0.48]], [['books'], ['friend'], ['books']]],
     [[['books']], [['books']]],
-    [[['reserve', 'cd', 0]], [['reserve', 'vhs', 0]]],
+    [[['reserve', 'cd', 0]], [['reserve', 'vhs', 0.3], ['bag', 0.86]]],
     [[['reserve', 'vinili', 0]], [['reserve', 'vinili', 0]]],
   ];
   const friendW = friend.d / 1000 + 0.03;
@@ -177,6 +178,13 @@ export function buildBookshelf(room) {
       const w = bw || xs - sg.lo;
       anchors.reserved.push({ kind: a, x0: xs - w, x1: xs, y, height: clear, z0: front + 0.01, z1: back - 0.01 });
       cursor.set(id, xs - w);
+    } else if (kind === 'bag') {
+      // the tennis bag (tennisbag.js), lying along the shelf with its front pocket to the room, its front
+      // a couple of centimetres in from the shelf's edge
+      const bag = buildTennisBag();
+      bag.geometry.computeBoundingBox();
+      bag.position.set(xs - a / 2, y, front + 0.018 - bag.geometry.boundingBox.min.z); bag.rotation.y = 0.015;
+      g.add(bag); anchors.tennisBag = bag; cursor.set(id, xs - a);
     } else if (kind === 'mini') {
       buildTrophyAndMini(xs - a, y); cursor.set(id, xs - a);
     } else if (kind === 'friend') {
