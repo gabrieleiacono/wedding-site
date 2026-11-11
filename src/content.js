@@ -116,9 +116,6 @@ export const CREDITS = [
   ['Disegnato a', 'penna, a mano (più o meno)'],
 ];
 
-// Suggested playlist for the hi-fi (shown as a list for now).
-export const PLAYLIST = ['[Canzone 1 — Artista]', '[Canzone 2 — Artista]', '[Canzone 3 — Artista]'];
-
 // Optional notes for the library card of a book taken off the shelf, keyed by its title exactly as
 // on the spine (or "Author · Title" when two books share a title). Books without one show only the facts.
 export const BOOK_NOTES = {

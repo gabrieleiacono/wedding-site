@@ -1,5 +1,5 @@
 // Wall C (south): the bookshelf (design F5). Real books by the authors we love, in their Italian
-// editions (spines drawn by spines.js from books-data.js), the mini hi-fi, a tennis trophy, a 1:12 model
+// editions (spines drawn by spines.js from books-data.js), a tennis trophy, a 1:12 model
 // of a classic Mini (mini.js) and a friend's novel standing face-out (the glowing LEGGIMI book lies on
 // the desk: leggimi.js). Some shelf space is kept free for records, CDs and
 // tapes (anchors.reserved), to be filled later.
@@ -63,7 +63,7 @@ export function buildBookshelf(room) {
   const PLAN = [
     [[['books']], [['books'], ['reserve', 'altro', 0.3]]],
     [[['mini', 0.55], ['books']], [['books']]],
-    [[['hifi', 0.45], ['reserve', 'cd', 0.48], ['books']], [['books'], ['friend'], ['books']]],
+    [[['books'], ['reserve', 'cd', 0.48]], [['books'], ['friend'], ['books']]],
     [[['books']], [['books']]],
     [[['reserve', 'cd', 0]], [['reserve', 'vhs', 0]]],
     [[['reserve', 'vinili', 0]], [['reserve', 'vinili', 0]]],
@@ -179,8 +179,6 @@ export function buildBookshelf(room) {
       cursor.set(id, xs - w);
     } else if (kind === 'mini') {
       buildTrophyAndMini(xs - a, y); cursor.set(id, xs - a);
-    } else if (kind === 'hifi') {
-      buildHifi(xs - a, y); cursor.set(id, xs - a);
     } else if (kind === 'friend') {
       // face-out, as a bookshop shows a new book: upright, its front cover to the room, leaning back a
       // touch on a little black stand. It is its own model (cover art and all), not part of the row's meshes.
@@ -231,18 +229,6 @@ export function buildBookshelf(room) {
     mini.position.set(xl + 0.2, y, front + 0.155); mini.rotation.y = MINI_YAW;
     g.add(mini);
     anchors.mini = mini;
-  }
-  function buildHifi(xl, y) {
-    const hx = xl + 0.225;
-    box(0.11, 0.2, 0.2, M.darkgrey, hx - 0.17, y + 0.1, front + 0.13, g);
-    box(0.11, 0.2, 0.2, M.darkgrey, hx + 0.17, y + 0.1, front + 0.13, g);
-    for (const s of [-1, 1]) { const c = cyl(0.035, 0.035, 0.005, M.black, hx + s * 0.17, y + 0.12, front + 0.03, g, 20); c.rotation.x = Math.PI / 2; }
-    box(0.21, 0.07, 0.22, M.grey, hx, y + 0.035, front + 0.14, g);
-    box(0.21, 0.06, 0.22, M.grey, hx, y + 0.1, front + 0.14, g);
-    box(0.21, 0.06, 0.22, M.darkgrey, hx, y + 0.162, front + 0.14, g);
-    const disp = box(0.09, 0.02, 0.002, makeInk({ color: '#5CF2FF', wash: 0.8, emissive: 0.9 }), hx - 0.04, y + 0.1, front + 0.029, g);
-    anchors.hifi = new THREE.Vector3(hx, y + 0.12, front);
-    anchors.hifiDisplay = disp;
   }
 
   // Every book on a shelf shares one material, so each shelf is drawn as two meshes: the spines

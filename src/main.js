@@ -322,7 +322,6 @@ const ALBUM_LEAN = () => frameView({ pts: around(anchors.album, 0.19, 0.03, 0.17
 const CAL_LEAN = () => frameView({ pts: around(anchors.calendar, 0.01, 0.26, 0.2), dir: new THREE.Vector3(-1, -0.04, 0), fov: 45 });
 // LEGGIMI: over the desk, the book propped up with its cover to you
 const LEGGIMI_LEAN = () => frameView({ pts: around(leggimi.at.clone().add(new THREE.Vector3(0, 0.06, 0)), 0.13, 0.09, 0.15), dir: elev(45, -0.25), fov: 45 });
-const HIFI_LEAN = () => frameView({ pts: around(shelf.hifi.clone().add(new THREE.Vector3(0, -0.02, 0.12)), 0.27, 0.14, 0.11), dir: new THREE.Vector3(0.15, -0.2, 1), fov: 45 });
 
 // --- hotspots ----------------------------------------------------------------------------
 const HOT = [
@@ -339,7 +338,6 @@ const HOT = [
   { n: 8, id: 'calendar', title: 'Calendario', sub: 'Quanto manca?', at: anchors.calendar, wall: 3,
     lean: CAL_LEAN, go: () => overlays.calendar() },
   { n: '☎', id: 'phone', title: 'Telefono', sub: 'Domande frequenti', at: anchors.phone, wall: 3, lean: TV_LEAN, go: () => { teletext.go('700'); showRemote(true); } },
-  { n: '♪', id: 'hifi', title: 'Mini hi-fi', sub: 'La playlist', at: shelf.hifi, wall: 2, lean: HIFI_LEAN, go: () => overlays.playlist() },
   { n: 'Aa', id: 'shelf', title: 'Scaffali', sub: 'Avvicinati e leggi i titoli', wall: 2, lean: shelfView.lean, go: () => { shelfView.enter(shelfAsk.ri, shelfAsk.x); shelfAsk = { ri: 0, x: null }; },
     at: (() => { const R = shelf.shelf.rows[3]; return shelf.shelf.group.localToWorld(new THREE.Vector3(0.15, R.y + 0.12, shelf.shelf.spineZ)); })() },
 ];

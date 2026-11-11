@@ -1,7 +1,7 @@
 // Close-ups that open on top of the room: album, notebooks (unused for now), the LEGGIMI book, the RSVP reply card,
-// the wall calendar, the hi-fi playlist and the closing credits (no longer reachable from the room).
+// the wall calendar and the closing credits (no longer reachable from the room).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
-import { PHOTOS, STORIES, LEGGIMI, CREDITS, PLAYLIST, WEDDING } from './content.js';
+import { PHOTOS, STORIES, LEGGIMI, CREDITS, WEDDING } from './content.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -57,10 +57,6 @@ export class Overlays {
   }
 
   leggimi() { this.show(`<div class="lined" style="max-width:560px"><h2>${esc(LEGGIMI.title)}</h2>${esc(LEGGIMI.body)}</div>`); }
-
-  playlist() {
-    this.show(`<div class="sheet" style="max-width:420px"><div class="mono" style="font-size:12px;color:#9A8A72">MINI HI-FI · CASSETTA LATO A</div><h2 class="hand" style="font-size:34px;margin:6px 0 10px;color:#B6402A">La nostra playlist</h2><ol class="hand" style="font-size:22px;margin:0;padding-left:24px">${PLAYLIST.map((p) => `<li>${esc(p)}</li>`).join('')}</ol></div>`);
-  }
 
   replyCard(r, n) {
     const row = (k, v) => v ? `<div>${k}: ${esc(v)}</div>` : '';
