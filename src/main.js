@@ -382,6 +382,8 @@ function clickAt(x, y) {
   if (rig.focus) return;
   // a tap on the bike (the pedals above all) pushes the pedals back, freewheeling; too many, too fast, and the chain comes off
   if (hitRoom && bike.isBike(hitRoom.object)) { bike.tap(); return; }
+  // a tap on the TV set itself zooms in on the teletext, like its hotspot
+  if (hitRoom && tv.isTV(hitRoom.object)) { activate(HOT.find((h) => h.id === 'tv')); return; }
   // otherwise: the nearest hotspot on screen within reach
   let best = null, bd = 90;
   for (const h of HOT) { if (!h.screen) continue; const d = Math.hypot(h.screen.x - x, h.screen.y - y); if (d < bd) { bd = d; best = h; } }

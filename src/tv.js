@@ -129,8 +129,11 @@ export function buildTV(room, teletext) {
     leaf.castShadow = true; g.add(leaf);
   }
 
+  // the set itself (body, screen, bezel, antenna): a tap on it zooms in on the teletext
+  const isTV = (o) => { for (; o; o = o.parent) if (o === tv) return true; return false; };
+
   return {
-    screen, screenWorld, glow,
+    screen, screenWorld, glow, isTV,
     ps: new THREE.Vector3(x - 0.22, 0.38, z + 0.24),
     tick(now) {
       const d = new Date();
