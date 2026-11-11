@@ -165,7 +165,7 @@ export class Typewriter {
     c.fillStyle = '#FBF8F0'; c.fillRect(0, 0, TEX_W, TEX_H);
     // faint printed form
     c.fillStyle = '#9A8A72'; c.font = `500 ${Math.round(0.0062 * s)}px "IBM Plex Mono", monospace`;
-    c.fillText('RISPOSTA AL MATRIMONIO', 0.018 * s, 0.018 * s);
+    c.fillText('RISPOSTA ALL\'INVITO', 0.018 * s, 0.018 * s);
     c.strokeStyle = '#C9B9A0'; c.lineWidth = 2; c.setLineDash([6, 6]);
     c.beginPath(); c.moveTo(0.018 * s, 0.022 * s); c.lineTo((PAPER_W - 0.018) * s, 0.022 * s); c.stroke(); c.setLineDash([]);
     c.font = `700 ${Math.round(0.0098 * s)}px "Courier Prime", "Courier New", monospace`;
