@@ -420,10 +420,15 @@ function clickAt(x, y) {
   // otherwise: the nearest hotspot on screen within reach
   let best = null, bd = 90;
   for (const h of HOT) { if (!h.screen) continue; const d = Math.hypot(h.screen.x - x, h.screen.y - y); if (d < bd) { bd = d; best = h; } }
-  // a tap right on a book (not on a hotspot) brings you up to its shelf
+  // a tap right on a book (not on a hotspot) brings you up to its shelf; the friend's novel, standing
+  // face-out, comes straight out into your hands with its card, so one tap is enough
   if (bd > 40 && nearestWall() === WALLS[2]) {
     const hit = ray.intersectObjects(shelf.shelf.meshes, false)[0], rec = shelf.shelf.bookAt(hit);
-    if (rec) { enterShelf(shelf.shelf.rows.findIndex((R) => R.row === rec.row), rec.pos.x); return; }
+    if (rec) {
+      enterShelf(shelf.shelf.rows.findIndex((R) => R.row === rec.row), rec.pos.x);
+      if (rec.b.friend && shelfView.active) shelfView.pull(rec);
+      return;
+    }
   }
   // a tap anywhere in the window opening (the view, the shutter, the glass) takes you to the window,
   // unless something in the room is in the way
