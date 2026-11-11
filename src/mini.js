@@ -1,9 +1,9 @@
-// A 1:24 scale model of a classic Mini (the original late-1950s/60s two-door saloon), in British racing
+// A 1:12 scale model of a classic Mini (the original late-1950s/60s two-door saloon), in British racing
 // green with twin white stripes over the bonnet, the roof and the boot lid, on a little black display base.
 // It stands on the bookshelf next to the tennis trophy, where the globe used to be.
 //
-// Drawn from the real car's numbers, in millimetres at full size, then shrunk 24 times: 3054 mm long,
-// 1410 wide, 1346 high, 2036 wheelbase, 10-inch wheels (so the model is 127 × 59 × 56 mm). The things
+// Drawn from the real car's numbers, in millimetres at full size, then shrunk 12 times: 3054 mm long,
+// 1410 wide, 1346 high, 2036 wheelbase, 10-inch wheels (so the model is 254 × 118 × 112 mm). The things
 // that make it a Mini are all here: the body seams on the outside (down the front of the doors, behind
 // the rear windows and along the sills), the cabin leaning in above the waist, the headlamps standing
 // in the front wings, the "moustache" grille, the external door hinges, the twin fuel caps, the drip
@@ -16,7 +16,7 @@ import { makeInk } from './ink.js';
 import { roundedShape } from './room.js';
 import { merge } from './geo.js';
 
-export const MINI_SCALE = 1 / 24;
+export const MINI_SCALE = 1 / 12;
 const MM = MINI_SCALE / 1000; // full-size millimetres → metres in the room
 
 const C = {
@@ -222,7 +222,7 @@ export function buildMini() {
   geo.translate(0, 0, -3054 / 2); // centred on its length
   for (const [g] of parts) g.dispose();
   parts.length = 0;
-  const mat = makeInk({ color: '#ffffff', vertexColors: true, wash: 0.82, spacing: 0.0032, hatch: 0.6 });
+  const mat = makeInk({ color: '#ffffff', vertexColors: true, wash: 0.82, spacing: 0.0042, hatch: 0.6 });
   const car = new THREE.Mesh(geo, mat);
   car.castShadow = car.receiveShadow = true;
 
@@ -240,10 +240,10 @@ export function buildMini() {
 
   // the display base: a walnut plinth with a little brass plate on its front edge, under the car's nose
   const g = new THREE.Group();
-  const baseH = 0.012, len = 3054 * MM + 0.03, wid = 1410 * MM + 0.026;
+  const baseH = 0.016, len = 3054 * MM + 0.034, wid = 1410 * MM + 0.03;
   const base = new THREE.Mesh(new THREE.BoxGeometry(wid, baseH, len), makeInk({ color: '#7A4A2A', wash: 0.7, wood: 1, grain: new THREE.Vector3(0, 0, 1), grainScale: 3 }));
   base.position.y = baseH / 2; base.castShadow = base.receiveShadow = true; g.add(base);
-  const brass = new THREE.Mesh(new THREE.BoxGeometry(0.032, 0.005, 0.001), makeInk({ color: '#B8964A', wash: 0.6 }));
+  const brass = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.007, 0.001), makeInk({ color: '#B8964A', wash: 0.6 }));
   brass.position.set(0, baseH / 2, len / 2 + 0.0004); g.add(brass);
   model.position.y = baseH;
   g.add(model);

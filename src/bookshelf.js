@@ -1,5 +1,5 @@
 // Wall C (south): the bookshelf (design F5). Real books by the authors we love, in their Italian
-// editions (spines drawn by spines.js from books-data.js), the mini hi-fi, a tennis trophy, a 1:24 model
+// editions (spines drawn by spines.js from books-data.js), the mini hi-fi, a tennis trophy, a 1:12 model
 // of a classic Mini (mini.js) and a friend's novel standing face-out (the glowing LEGGIMI book lies on
 // the desk: leggimi.js). Some shelf space is kept free for records, CDs and
 // tapes (anchors.reserved), to be filled later.
@@ -32,8 +32,9 @@ function normalise(raw, i) {
   });
 }
 
-// which way the model Mini points: its nose towards the middle of the room
-const MINI_YAW = -2.62;
+// which way the model Mini points: its nose towards the middle of the room, its side along the shelf
+// (at 1:12 it is 28 cm on its base, so turned any further it would not fit the shelf's 32 cm depth)
+const MINI_YAW = -2.09;
 
 export function buildBookshelf(room) {
   const g = new THREE.Group(); room.add(g);
@@ -227,7 +228,7 @@ export function buildBookshelf(room) {
     for (const s of [-1, 1]) { const h = new THREE.Mesh(new THREE.TorusGeometry(0.03, 0.006, 6, 16, Math.PI), M.brass); h.position.set(tx + s * 0.07, y + 0.18, front + 0.16); h.rotation.z = s * -Math.PI / 2; g.add(h); }
     // the Mini on its base, at an angle so its nose and the stripes on the bonnet look out at the room
     const mini = buildMini();
-    mini.position.set(xl + 0.17, y, front + 0.12); mini.rotation.y = MINI_YAW;
+    mini.position.set(xl + 0.2, y, front + 0.155); mini.rotation.y = MINI_YAW;
     g.add(mini);
     anchors.mini = mini;
   }
