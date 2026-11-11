@@ -69,7 +69,7 @@ export class Overlays {
 
   calendar() {
     const days = daysLeft();
-    this.show(`<div class="sheet calendar"><div class="mono" style="font-size:12px;color:#9A8A72">${esc(WEDDING.dateLong)}</div><div class="big">${days > 0 ? days : '🎉'}</div><div class="hand" style="font-size:28px">${days > 1 ? 'giorni al matrimonio' : days === 1 ? 'domani!' : 'è oggi!'}</div><p class="mono" style="font-size:12px;color:#6A5A4A">Ogni sera una croce rossa sul calendario.</p></div>`);
+    this.show(`<div class="sheet calendar"><div class="mono" style="font-size:12px;color:#9A8A72">${esc(WEDDING.dateLong)}</div><div class="big">${days > 0 ? days : '🎉'}</div><div class="hand" style="font-size:28px">${days > 1 ? 'giorni al matrimonio' : days === 1 ? 'domani!' : 'è oggi!'}</div></div>`);
   }
 
   credits() {
