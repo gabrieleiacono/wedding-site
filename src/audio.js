@@ -1,5 +1,5 @@
 // All sounds are synthesised with WebAudio (no files): typewriter clack, bell, correction "zzzt",
-// carriage return, TV click, bicycle freewheel and chain, a bass string, crumpled paper, distant train, donkey bray and a rooster. Audio starts on first click.
+// carriage return, TV click, bicycle freewheel and chain, a bass string, distant train, donkey bray and a rooster. Audio starts on first click.
 export class Sound {
   constructor() { this.ctx = null; this.on = true; }
   unlock() {
@@ -131,15 +131,6 @@ export class Sound {
     // the fingertip leaving the string
     const n = this.noise(0.04); const nf = this.ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 900; nf.Q.value = 1.5;
     n.connect(nf); this.env(nf, t, 0.001, 0.12, 0.035); n.start(t);
-  }
-  // a ball of paper pulled out of the bin and smoothed out: a run of little crackles
-  crumple() {
-    if (!this.ok) return; const t0 = this.ctx.currentTime;
-    for (let k = 0; k < 9; k++) {
-      const t = t0 + k * 0.035 + Math.random() * 0.03;
-      const n = this.noise(0.05); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800 + Math.random() * 2600; f.Q.value = 0.9;
-      n.connect(f); this.env(f, t, 0.002, 0.1 + Math.random() * 0.12, 0.03 + Math.random() * 0.04); n.start(t);
-    }
   }
   lampSwitch() {
     if (!this.ok) return; const t = this.ctx.currentTime;

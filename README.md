@@ -12,8 +12,8 @@ Turn around the room; every piece of wedding information lives in an object.
 - **Tennis racket**: an old 1970s wooden racket (laminated frame, gut strings, leather grip) hangs on a nail on the wall right of the bookshelf, before the corner with the door. Tap it and it rocks on its nail.
 - **Bass**: the real one, from a photo: a Squier 40th Anniversary Jazz Bass (Gold Edition, metallic ruby) hangs by its neck on a wall hanger in the corner of the desk wall by the door. Tap it to go up close and pluck a string; up close, each tap plucks the string nearest to it (E, A, D or G), and the string shivers while it rings.
 - **Due terre**: two framed prints on the desk wall, right of the window: a graphite rubbing of the rock carvings in Valle Camonica (Darfo) and an etching of San Giorgio in Modica. Tap them to look closer.
-- **Il cestino delle bozze**: a wicker bin right of the desk, full of crumpled drafts of the invitation, one smoothed out on the floor. Tap it to pull out a draft; the drafts (`DRAFTS` in `content.js`) are crossed out with a note in red, until the one that went out.
-- **Il tappeto**: a Sicilian frazzata (rag rug) in the middle of the floor.
+- **Il cestino delle bozze**: a wicker bin right of the desk, full of crumpled drafts of the invitation, one smoothed out on the floor. Just to look at.
+- **Il tappeto**: a big Sicilian frazzata (rag rug) across the floor, from the phone table to the bookshelf.
 - **Window**: living landscape (trains on the viaduct, donkeys and foals, rooster, swallows); pull the shutter strap
 - **Lamp**: comes on by itself at the blue hour; click it to turn it on or off.
 - **Calendar**: countdown. **Phone**: FAQ.
@@ -72,8 +72,8 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/tennisbag.js` | The tennis racket bag on the second shelf from the bottom (right-hand bay), from photos of real six-racket bags (`wedding-site-shots/tennis-bag/refs` in the project files): a superquadric body, padded and wedge-shaped like a real racket bag (tall and round at the racket-head end, the top sloping down to a handle end less than half as high and a little narrower) (`BAG` holds its size, `C` its colours), with cream piping round the side panels, two main zips with pullers, a padded front pocket with its zip and a plain badge, carry handles sewn on with box-and-cross stitching and a wrapped grip, and a shoulder strap on D-rings with its pad over the front edge. Bands, cords and small parts are laid on the surface along paths in its (θ, φ) coordinates, then everything is merged into one vertex-coloured mesh |
 | `src/geo.js` | Noise and geometry helpers shared by the landscape and the animals |
 | `src/leggimi.js` | The LEGGIMI book on the desk: spine from `spines.js`, a cover drawn in canvas, and how it props itself up when tapped |
-| `src/overlays.js` | Album, LEGGIMI, cards, calendar, a draft from the bin, credits (and the notebooks' stories, not opened from the room any more) |
-| `src/audio.js` | Synthesised sounds (including the bicycle freewheel's ratchet, a plucked bass string and crumpled paper) |
+| `src/overlays.js` | Album, LEGGIMI, cards, calendar, credits (and the notebooks' stories, not opened from the room any more) |
+| `src/audio.js` | Synthesised sounds (including the bicycle freewheel's ratchet, a plucked bass string) |
 | `src/store.js` | RSVP storage (Google Sheet / claude.ai / local) |
 | `src/main.js` | Lights, camera rig, hotspots, frame loop |
 

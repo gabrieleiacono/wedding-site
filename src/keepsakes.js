@@ -3,8 +3,9 @@
 //     Modica–Darfo: a rubbing of the rock carvings in Valle Camonica, and an etching of San Giorgio in
 //     Modica. A tap takes you up to them.
 //   · Il cestino delle bozze: a wicker bin right of the desk, full of crumpled drafts of this very
-//     invitation, one of them flattened out again on the floor. A tap pulls out a draft (overlays.draft).
-//   · Il tappeto: a Sicilian frazzata, woven from rag strips, in the middle of the parquet.
+//     invitation, one of them flattened out again on the floor. Just to look at.
+//   · Il tappeto: a big Sicilian frazzata, woven from rag strips, across the floor from the phone table
+//     to the bookshelf.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { ROOM, box } from './room.js';
@@ -84,14 +85,16 @@ export function buildBin(room) {
   sm.rotation.x = -Math.PI / 2; sm.rotation.z = 0.5; sm.position.set(-0.14, 0.003, 0.32); g.add(sm);
   shadowy(g);
   g.position.set(0.98, 0, -1.42); // right of the desk, by the wall
-  return { group: g, isBin: inside(g) };
+  return { group: g };
 }
 
 // --- 7 · Il tappeto -----------------------------------------------------------------------------------------
 export function buildRug(room) {
   const g = new THREE.Group(); room.add(g);
-  const L = 2.0, W = 1.3;
-  const top = new THREE.Mesh(new THREE.PlaneGeometry(W, L), art(A.frazzata(), { hatch: 0.55, wash: 0.88, lift: -0.02, spacing: 0.009 }));
+  // from just short of the phone table (west) to the TV side, and from the desk side to the bookshelf
+  const RUG = { x0: -1.57, x1: 1.05, z0: -0.97, z1: 1.44 };
+  const L = RUG.x1 - RUG.x0, W = RUG.z1 - RUG.z0;
+  const top = new THREE.Mesh(new THREE.PlaneGeometry(W, L), art(A.frazzata(Math.round(W * 790), Math.round(L * 790)), { hatch: 0.55, wash: 0.88, lift: -0.02, spacing: 0.009 }));
   top.rotation.x = -Math.PI / 2; top.rotation.z = Math.PI / 2; top.position.y = 0.007; g.add(top);
   box(L, 0.006, W, paint('#6A4A3A'), 0, 0.003, 0, g).castShadow = false;
   // the fringes: knotted warp ends at both short sides
@@ -102,7 +105,7 @@ export function buildRug(room) {
   const under = new THREE.LineSegments(fg, new THREE.LineBasicMaterial({ color: '#7A6A50' })); under.position.set(0.002, 0.001, 0); g.add(under);
   // taps go through the fringes (a raycast counts a line as hit anywhere within a metre of it)
   fringe.raycast = under.raycast = () => {};
-  g.position.set(0.05, 0, -0.32); g.rotation.y = 0.04;
+  g.position.set((RUG.x0 + RUG.x1) / 2, 0, (RUG.z0 + RUG.z1) / 2); g.rotation.y = 0.008;
   g.traverse((o) => { if (o.isMesh) o.receiveShadow = true; });
   return { group: g };
 }

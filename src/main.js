@@ -81,9 +81,8 @@ const leggimi = buildLeggimi(room); // the glowing book, on the desk right of th
 const bass = buildBass(room); // the bass on its hanger, in the corner of the desk wall by the door
 bass.hooks.pluck = (i) => sound.pluck(i);
 const prints = buildPrints(room); // two prints, right of the window: Valle Camonica and Modica
-const bin = buildBin(room); // the wicker bin of drafts, right of the desk
+buildBin(room); // the wicker bin of drafts, right of the desk (just to look at)
 buildRug(room); // the frazzata on the floor
-let draftN = 0; // which draft the bin gives you next
 const shelfView = new ShelfView({ shelf: shelf.shelf, sound });
 const typewriter = new Typewriter(room, sound);
 const view = new Countryside(scene, sound);
@@ -407,7 +406,6 @@ function unfocus(quick) {
 }
 $('#back').addEventListener('click', () => unfocus());
 overlays.onClose = () => { if (!shelfView.active) unfocus(); };
-overlays.onDraft = () => { sound.crumple(); draftN++; }; // the next draft out of the bin
 
 function clickAt(x, y) {
   const ndc = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
@@ -427,8 +425,6 @@ function clickAt(x, y) {
   if (hitRoom && bass.isBass(hitRoom.object)) { activate(BASS_HOT); bass.pluck(hitRoom.point); return; }
   // a tap on the prints takes you up to them
   if (hitRoom && prints.isPrints(hitRoom.object)) { activate(PRINTS_HOT); return; }
-  // a tap on the wicker bin pulls out a draft of the invitation and smooths it out
-  if (hitRoom && bin.isBin(hitRoom.object)) { sound.crumple(); overlays.draft(draftN++); return; }
   // a tap on the bike (the pedals above all) pushes the pedals back, freewheeling; too many, too fast, and the chain comes off
   if (hitRoom && bike.isBike(hitRoom.object)) { bike.tap(); return; }
   // a tap on the tennis racket sets it rocking on its nail

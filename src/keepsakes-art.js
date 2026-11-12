@@ -161,8 +161,9 @@ export function draftSheet() {
 }
 
 // --- 7 · Il tappeto: a frazzata, woven from rag strips: bands of colour, each pick a little twisted --
-export function frazzata() {
-  const W = 1400, H = 2000; const [c, g] = cv(W, H); const r = rng(1973);
+// W across the rug, H along it (the bands run across, the borders are at the two fringed ends)
+export function frazzata(W = 1400, H = 2000) {
+  const [c, g] = cv(W, H); const r = rng(1973);
   g.fillStyle = '#EDE3CF'; g.fillRect(0, 0, W, H);
   const pal = ['#C23B22', '#2C5C9A', '#E9B634', '#3F8A4A', '#F2EADA', '#7A2A4A', '#D9733A', '#1F2A44'];
   // weft picks run across the width; bands of 6..40 picks; borders denser and darker
