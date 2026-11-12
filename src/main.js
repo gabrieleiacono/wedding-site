@@ -6,6 +6,8 @@ import { buildTV } from './tv.js';
 import { buildBookshelf } from './bookshelf.js';
 import { buildBike } from './bike.js';
 import { buildRacket } from './racket.js';
+import { buildBass } from './bass.js';
+import { buildPrints, buildBin, buildRug } from './keepsakes.js';
 import { buildLeggimi } from './leggimi.js';
 import { ShelfView } from './shelfview.js';
 import { Typewriter } from './typewriter.js';
@@ -76,6 +78,12 @@ Object.assign(bike.hooks, { click: (d, v) => sound.ratchet(d, v), whirr: (v) => 
 const racket = buildRacket(room); // the old wooden racket on the wall, right of the bookshelf
 racket.hooks.knock = (v) => sound.racket(v);
 const leggimi = buildLeggimi(room); // the glowing book, on the desk right of the typewriter
+const bass = buildBass(room); // the bass on its hanger, in the corner of the desk wall by the door
+bass.hooks.pluck = (i) => sound.pluck(i);
+const prints = buildPrints(room); // two prints, right of the window: Valle Camonica and Modica
+const bin = buildBin(room); // the wicker bin of drafts, right of the desk
+buildRug(room); // the frazzata on the floor
+let draftN = 0; // which draft the bin gives you next
 const shelfView = new ShelfView({ shelf: shelf.shelf, sound });
 const typewriter = new Typewriter(room, sound);
 const view = new Countryside(scene, sound);
@@ -322,6 +330,12 @@ const CAL_LEAN = () => frameView({ pts: around(anchors.calendar, 0.01, 0.26, 0.2
 // LEGGIMI: over the desk, the book propped up with its cover to you
 const LEGGIMI_LEAN = () => frameView({ pts: around(leggimi.at.clone().add(new THREE.Vector3(0, 0.06, 0)), 0.13, 0.09, 0.15), dir: elev(45, -0.25), fov: 45 });
 
+// The bass: all of it, hanging, from a little to the right, so the strings catch the light. Taps pluck it.
+const BASS_HOT = { id: 'bass', wall: 0, lean: () => frameView({ pts: around(bass.center, 0.17, 0.585, 0.05), dir: new THREE.Vector3(-0.3, -0.06, -1).normalize(), fov: portrait() ? 50 : 40, fill: 0.97 }),
+  go: () => { $('#help').hidden = false; $('#help').textContent = 'Tocca una corda per suonarla'; } };
+// The two prints, straight on.
+const PRINTS_HOT = { id: 'prints', wall: 0, lean: () => frameView({ pts: around(prints.center, 0.4, 0.25, 0.02), dir: new THREE.Vector3(0, -0.04, -1).normalize(), fov: portrait() ? 50 : 40 }) };
+
 // --- hotspots ----------------------------------------------------------------------------
 const HOT = [
   { n: 1, id: 'typewriter', title: 'Macchina da scrivere', sub: 'Rispondi all\'invito', at: typewriter.world, wall: 0,
@@ -393,6 +407,7 @@ function unfocus(quick) {
 }
 $('#back').addEventListener('click', () => unfocus());
 overlays.onClose = () => { if (!shelfView.active) unfocus(); };
+overlays.onDraft = () => { sound.crumple(); draftN++; }; // the next draft out of the bin
 
 function clickAt(x, y) {
   const ndc = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
@@ -405,7 +420,15 @@ function clickAt(x, y) {
   if (shelfView.active) { if (!shelfView.multi) shelfView.tap(ray); return; }
   // in front of the TV, a tap on the screen turns to the next subpage (back to the first after the last)
   if (rig.focus?.lean === TV_LEAN && !teletext.av && ray.intersectObject(tv.screen).length && teletext.subCount() > 1) { sound.tvClick(); teletext.step(1); return; }
+  // up close to the bass, a tap plucks the string nearest to it
+  if (rig.focus === BASS_HOT) { if (hitRoom && bass.isBass(hitRoom.object)) bass.pluck(hitRoom.point); return; }
   if (rig.focus) return;
+  // a tap on the bass takes you up to it, and plucks a string on the way
+  if (hitRoom && bass.isBass(hitRoom.object)) { activate(BASS_HOT); bass.pluck(hitRoom.point); return; }
+  // a tap on the prints takes you up to them
+  if (hitRoom && prints.isPrints(hitRoom.object)) { activate(PRINTS_HOT); return; }
+  // a tap on the wicker bin pulls out a draft of the invitation and smooths it out
+  if (hitRoom && bin.isBin(hitRoom.object)) { sound.crumple(); overlays.draft(draftN++); return; }
   // a tap on the bike (the pedals above all) pushes the pedals back, freewheeling; too many, too fast, and the chain comes off
   if (hitRoom && bike.isBike(hitRoom.object)) { bike.tap(); return; }
   // a tap on the tennis racket sets it rocking on its nail
@@ -755,6 +778,7 @@ function drawFrame(now) {
   typewriter.tick(now, dt);
   bike.tick(now);
   racket.tick(now);
+  bass.tick(now);
   shutter += (shutterTarget - shutter) * Math.min(1, dt * 2.2); layoutShutter();
   bookOut += (bookTarget - bookOut) * Math.min(1, dt * 6);
   leggimi.tick(now, bookOut);
@@ -802,4 +826,4 @@ if (params.has('shelf')) setTimeout(() => {
   if (params.has('book')) setTimeout(() => shelfView.pull(shelfView.row.books[+params.get('book')] ?? shelfView.row.books[0]), 900);
 }, 300);
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
-window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView, bike, racket, sound };
+window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView, bike, racket, bass, BASS_HOT, PRINTS_HOT, sound };

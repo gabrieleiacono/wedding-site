@@ -125,6 +125,14 @@ body.focused .hot, body.focused #hint { display: none; }
 .calendar { width: min(420px, 100%); text-align: center; }
 .calendar .big { font: 800 64px 'Bricolage Grotesque', sans-serif; margin: 6px 0; color: #B6402A; }
 
+/* a draft out of the bin: creased, typed, crossed out, a note in red */
+.draft { width: min(440px, 100%); font: 17px/1.55 'Courier Prime', monospace; background-image: linear-gradient(118deg, transparent 0 38%, rgba(120, 95, 60, 0.12) 38.3%, transparent 39% 100%), linear-gradient(64deg, transparent 0 61%, rgba(120, 95, 60, 0.1) 61.3%, transparent 62% 100%), linear-gradient(172deg, transparent 0 47%, rgba(255, 255, 255, 0.6) 47.4%, transparent 48.4% 100%); }
+.draft .num { color: #9A8A72; font-size: 12px; margin-bottom: 14px; }
+.draft .body p { margin: 0 0 8px; }
+.draft:not(.ok) .body { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: rgba(42, 38, 34, 0.85); }
+.draft .note { font: 700 34px 'Caveat', cursive; color: #C23B22; transform: rotate(-4deg); margin: 10px 0 18px 28%; }
+.draft .btn { position: relative; z-index: 1; }
+
 #typer { position: fixed; left: -1000px; top: 0; opacity: 0; width: 10px; height: 10px; font-size: 16px; }
 
 #loading { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: #F7EEDC; color: var(--ink); font: 700 30px 'Caveat', cursive; transition: opacity 0.8s; z-index: 20; }

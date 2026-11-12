@@ -1,5 +1,5 @@
 // All sounds are synthesised with WebAudio (no files): typewriter clack, bell, correction "zzzt",
-// carriage return, TV click, bicycle freewheel and chain, distant train, donkey bray and a rooster. Audio starts on first click.
+// carriage return, TV click, bicycle freewheel and chain, a bass string, crumpled paper, distant train, donkey bray and a rooster. Audio starts on first click.
 export class Sound {
   constructor() { this.ctx = null; this.on = true; }
   unlock() {
@@ -114,6 +114,33 @@ export class Sound {
     for (const [m, k] of [[1, 0.06], [2.01, 0.03], [2.98, 0.015]]) { const s = this.ctx.createOscillator(); s.type = 'triangle'; s.frequency.value = base * m; this.env(s, t + 0.004, 0.003, k * v, 0.35); s.start(t); s.stop(t + 0.45); }
   }
   // the brass turn-switch under the lamp's shade: a short dry double click
+  // a bass string, plucked with a finger near the pickups (so a fifth of the way along: the 5th, 10th...
+  // harmonics are missing), unplugged: E A D G, the tone darkening as it rings
+  pluck(i = 0) {
+    if (!this.ok) return; const t = this.ctx.currentTime;
+    const f0 = [41.2, 55, 73.42, 98][i] ?? 55;
+    const N = 32, re = new Float32Array(N + 1), im = new Float32Array(N + 1);
+    for (let n = 1; n <= N; n++) im[n] = Math.sin(n * Math.PI * 0.2) / (n * n);
+    const o = this.ctx.createOscillator(); o.setPeriodicWave(this.ctx.createPeriodicWave(re, im)); o.frequency.value = f0;
+    const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.Q.value = 0.8;
+    f.frequency.setValueAtTime(2600, t); f.frequency.exponentialRampToValueAtTime(240, t + 1.4);
+    const g = this.ctx.createGain();
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(0.7, t + 0.005);
+    g.gain.exponentialRampToValueAtTime(0.25, t + 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 3);
+    o.connect(f); f.connect(g); g.connect(this.master); o.start(t); o.stop(t + 3.05);
+    // the fingertip leaving the string
+    const n = this.noise(0.04); const nf = this.ctx.createBiquadFilter(); nf.type = 'bandpass'; nf.frequency.value = 900; nf.Q.value = 1.5;
+    n.connect(nf); this.env(nf, t, 0.001, 0.12, 0.035); n.start(t);
+  }
+  // a ball of paper pulled out of the bin and smoothed out: a run of little crackles
+  crumple() {
+    if (!this.ok) return; const t0 = this.ctx.currentTime;
+    for (let k = 0; k < 9; k++) {
+      const t = t0 + k * 0.035 + Math.random() * 0.03;
+      const n = this.noise(0.05); const f = this.ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 1800 + Math.random() * 2600; f.Q.value = 0.9;
+      n.connect(f); this.env(f, t, 0.002, 0.1 + Math.random() * 0.12, 0.03 + Math.random() * 0.04); n.start(t);
+    }
+  }
   lampSwitch() {
     if (!this.ok) return; const t = this.ctx.currentTime;
     for (const [dt, v] of [[0, 0.5], [0.035, 0.3]]) {

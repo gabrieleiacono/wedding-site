@@ -101,6 +101,18 @@ export const STORIES = [
   { title: 'La proposta', color: '#ECE5D6', body: '[Da scrivere.]' },
 ];
 
+// The wicker bin by the desk: drafts of this invitation that didn't make it, crumpled up, and the one that
+// did. A tap on the bin pulls them out one at a time, in this order. `note` is scribbled on in red;
+// `ok` marks the one that went out (not crossed out).
+const COUPLE = WEDDING.names.replace(' & ', ' e ');
+export const DRAFTS = [
+  { lines: ['Carissimi amici e parenti,', `con immensa gioia e commozione vi annunciamo che il giorno ${WEDDING.dateLong.replace(/^Sabato /, '')} coroneremo il nostro sogno d’amore, nella splendida cornice di…`], note: 'troppo da bomboniera' },
+  { lines: ['Egregi Signori,', `con la presente si comunica che i sottoscritti ${COUPLE} contrarranno matrimonio in data ${WEDDING.dateISO.split('-').reverse().join('/')}. Si prega di dare riscontro entro e non oltre il ${WEDDING.rsvpBy}.`, 'Distinti saluti.'], note: 'sembra una raccomandata' },
+  { lines: ['Cari tutti,', 'indovinate un po’?'], note: 'lo sanno già tutti' },
+  { lines: ['BREAKING NEWS:', 'G. + P. = ♥'], note: 'no.' },
+  { lines: ['Ciao!', 'Allora: ci sposiamo.', `${WEDDING.dateLong}, ${WEDDING.villa}, ${WEDDING.town}.`, 'Venite?'], note: 'questa va bene!', ok: true },
+];
+
 // The glowing "LEGGIMI" book on the desk.
 export const LEGGIMI = {
   title: 'Leggimi',

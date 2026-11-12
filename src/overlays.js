@@ -1,7 +1,7 @@
 // Close-ups that open on top of the room: album, notebooks (unused for now), the LEGGIMI book, the RSVP reply card,
-// the wall calendar and the closing credits (no longer reachable from the room).
+// the wall calendar, a draft out of the wicker bin, and the closing credits (no longer reachable from the room).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
-import { PHOTOS, STORIES, LEGGIMI, CREDITS, WEDDING } from './content.js';
+import { PHOTOS, STORIES, LEGGIMI, CREDITS, WEDDING, DRAFTS } from './content.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -63,6 +63,13 @@ export class Overlays {
     this.show(`<div class="sheet card"><div class="num">RISPOSTA N. ${String(n).padStart(3, '0')}</div><div style="margin-top:8px">${esc(r.name).toUpperCase()}</div>${row('CI SARÀ', r.coming ? 'SÌ' : 'NO')}${r.coming ? row('ALLERGIE', r.allergies || 'nessuna') + row('PAROLA BUFFA', r.word) : ''}${row('MSG', r.message)}<hr><div class="thanks">${r.coming ? 'grazie! a presto' : 'grazie lo stesso!'}</div><div class="mono" style="font-size:12px;color:#6A5A4A">Il tuo nome è sul televideo, pagina 600.</div></div>`);
   }
 
+  // a draft of the invitation out of the wicker bin, smoothed out: crossed out, with a note in red, all but the last
+  draft(i) {
+    const n = ((i % DRAFTS.length) + DRAFTS.length) % DRAFTS.length, d = DRAFTS[n];
+    const tilt = [-2.5, 1.8, -1.2, 2.6, -0.8][n % 5];
+    this.show(`<div class="sheet draft${d.ok ? ' ok' : ''}" style="transform:rotate(${tilt}deg)"><div class="mono num">BOZZA ${n + 1} DI ${DRAFTS.length}</div><div class="body">${d.lines.map((l) => `<p>${esc(l)}</p>`).join('')}</div><div class="hand note">${esc(d.note)}</div><button class="pill btn" type="button">${n + 1 < DRAFTS.length ? 'Un’altra bozza →' : 'Dall’inizio ↺'}</button></div>`);
+    this.card.querySelector('button').addEventListener('click', () => { this.onDraft?.(); this.draft(n + 1); });
+  }
   calendar() {
     const days = daysLeft();
     this.show(`<div class="sheet calendar"><div class="mono" style="font-size:12px;color:#9A8A72">${esc(WEDDING.dateLong)}</div><div class="big">${days > 0 ? days : '🎉'}</div><div class="hand" style="font-size:28px">${days > 1 ? 'giorni al matrimonio' : days === 1 ? 'domani!' : 'è oggi!'}</div></div>`);
