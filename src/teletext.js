@@ -207,7 +207,8 @@ export class Teletext {
       if (br + 1 < lay.rows && !last) this.text(MARGIN, br + 1, how, G, cell);
     }
     if (cur.logo && !this.big) this.mosaicVilla(29, 15);
-    if (cur.weather) this.mosaicSun(14, 4);
+    // the sun sits in the three empty lines that open the weather page, so only on its first subpage
+    if (cur.weather && si === 0) this.mosaicSun(14, 4);
     // fastext bar: each short name centred in its coloured key, in full teletext cells (squeezed only if a
     // name were ever longer than 7 letters)
     const labels = cur.fast.map((p) => (all[p]?.title ?? p));
