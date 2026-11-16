@@ -55,6 +55,8 @@ body.focused .hot, body.focused #hint { display: none; }
 #remote .fastext button { height: 36px; padding: 0 2px; border: none; border-radius: 8px; font: 700 10px 'IBM Plex Mono', monospace; white-space: nowrap; cursor: pointer; overflow: hidden; }
 #remote .av-keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 #remote .av-keys[hidden] { display: none; }
+/* the av row's own TV key, so a phone can leave the game without opening the number pad (where the other one is) */
+#remote .av-keys .game-key { display: none; }
 /* On a phone (or a short landscape screen) the number pad folds away while you read: the page display with
    ◀ ▶, the coloured keys and 123 (which opens the pad) stay, and the TV gets the room the pad took. */
 #remote .disp-row button.more { background: #FFE81A; color: #1A1A1A; animation: more-pulse 1.6s ease-in-out infinite; }
@@ -74,6 +76,8 @@ body.focused .hot, body.focused #hint { display: none; }
   #remote .size-key[aria-pressed="true"] { background: #F3EEE4; color: #2B2B2E; }
   #remote .pad-toggle[aria-expanded="true"] { background: #F3EEE4; color: #2B2B2E; }
   #remote:not(.pad-open) .digits { display: none; }
+  #remote:not(.pad-open) .av-keys { grid-template-columns: 1fr 1fr 1fr; }
+  #remote:not(.pad-open) .av-keys .game-key { display: block; }
 }
 
 #overlay { position: fixed; inset: 0; background: rgba(20, 16, 12, 0.55); display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
