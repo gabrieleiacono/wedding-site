@@ -1,7 +1,8 @@
-// Close-ups that open on top of the room: album, notebooks (unused for now), the LEGGIMI book, the RSVP reply card,
+// Close-ups that open on top of the room: the photo viewer, notebooks (unused for now), the LEGGIMI book, the RSVP reply card,
 // the wall calendar and the closing credits (no longer reachable from the room).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
-import { PHOTOS, STORIES, LEGGIMI, CREDITS, WEDDING } from './content.js';
+import { STORIES, LEGGIMI, CREDITS, WEDDING } from './content.js';
+import { PHOTOS } from './photos.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -15,35 +16,62 @@ export class Overlays {
   }
   get open() { return !this.el.hidden; }
   show(html, cls = '') {
+    this.cleanup?.(); this.cleanup = null;
     this.card.className = cls; this.card.innerHTML = html; this.el.hidden = false;
+    this.el.classList.toggle('viewing', cls === 'viewer');
     $('#overlay-close').focus();
   }
-  close() { if (this.el.hidden) return; this.el.hidden = true; this.card.innerHTML = ''; this.onClose(); }
+  close() { if (this.el.hidden) return; this.cleanup?.(); this.cleanup = null; this.el.hidden = true; this.el.classList.remove('viewing'); this.card.innerHTML = ''; this.onClose(); }
 
-  album() {
-    let spread = 0;
-    const per = 4, spreads = Math.ceil(PHOTOS.length / per);
-    const photo = (p, i) => {
-      if (!p) return '<div></div>';
-      const tilt = ((i * 37) % 9) - 4;
-      const img = p.src ? `background-image:url('${esc(p.src)}')` : `background:${sketch(i)}`;
-      return `<figure class="photo" style="transform:rotate(${tilt}deg);margin:0"><div class="img" style="${img}" role="img" aria-label="${esc(p.caption)}"></div><span class="corner c1"></span><span class="corner c2"></span><figcaption class="cap">${esc(p.caption)}</figcaption></figure>`;
+  /** The photos, one at a time, full screen and without captions, opened on photo i: ‹ › or the arrow
+   *  keys to go through them, a swipe on a phone, ✕, Esc or a tap beside the photo to close. */
+  photos(i = 0) {
+    const n = PHOTOS.length;
+    if (!n) return;
+    this.show(`<div class="v-stage"><div class="v-blur"></div><img class="v-img" alt="" draggable="false"></div>` +
+      `<button type="button" class="v-prev pill btn round" aria-label="Foto precedente">‹</button>` +
+      `<button type="button" class="v-next pill btn round" aria-label="Foto successiva">›</button>` +
+      `<div class="v-count pill mono" aria-live="polite"></div>`, 'viewer');
+    const c = this.card, stage = c.querySelector('.v-stage'), img = c.querySelector('.v-img'), blur = c.querySelector('.v-blur');
+    const wrap = (k) => (k % n + n) % n;
+    const preload = (k) => { const im = new Image(); im.src = PHOTOS[wrap(k)].l; };
+    const show = (k, dir = 0) => {
+      i = wrap(k);
+      const p = PHOTOS[i];
+      blur.style.backgroundImage = `url('${esc(p.s)}')`;
+      img.classList.remove('in'); img.style.transform = dir ? `translateX(${dir * 6}%)` : '';
+      img.alt = `Foto ${i + 1} di ${n}`;
+      img.onload = () => requestAnimationFrame(() => { img.style.transform = ''; img.classList.add('in'); });
+      img.src = p.l;
+      c.querySelector('.v-count').textContent = `${i + 1} / ${n}`;
+      preload(i + 1); preload(i - 1);
     };
-    const render = (dir) => {
-      const a = spread * per;
-      this.card.querySelector('.album').innerHTML =
-        `<div class="page left">${photo(PHOTOS[a], a)}${photo(PHOTOS[a + 1], a + 1)}</div>` +
-        `<div class="page right">${photo(PHOTOS[a + 2], a + 2)}${photo(PHOTOS[a + 3], a + 3)}</div>`;
-      this.card.querySelector('.count').textContent = `${spread + 1} / ${spreads}`;
-      if (dir) { const p = this.card.querySelector(dir > 0 ? '.page.right' : '.page.left'); p.style.transform = `rotateY(${dir > 0 ? 90 : -90}deg)`; requestAnimationFrame(() => requestAnimationFrame(() => { p.style.transform = ''; })); }
+    c.querySelector('.v-prev').addEventListener('click', () => show(i - 1, -1));
+    c.querySelector('.v-next').addEventListener('click', () => show(i + 1, 1));
+    if (n < 2) c.querySelectorAll('.v-prev, .v-next').forEach((b) => { b.hidden = true; });
+    // a swipe: the photo follows the finger, and past a third of a thumb's throw it turns
+    let sx = null, sy = 0, dx = 0, moved = false;
+    stage.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; dx = 0; moved = false; img.style.transition = 'none'; });
+    stage.addEventListener('pointermove', (e) => {
+      if (sx === null) return;
+      dx = e.clientX - sx;
+      if (Math.abs(dx) > 8 || Math.abs(e.clientY - sy) > 8) moved = true;
+      if (n > 1) img.style.transform = `translateX(${dx}px)`;
+    });
+    const end = (e) => {
+      if (sx === null) return;
+      sx = null; img.style.transition = '';
+      if (n > 1 && Math.abs(dx) > 50) show(i + (dx < 0 ? 1 : -1), dx < 0 ? 1 : -1);
+      else { img.style.transform = ''; if (!moved && e.type === 'pointerup' && e.target !== img) this.close(); }
     };
-    this.show(`<div class="album"></div><div class="album-nav"><button class="pill btn" data-d="-1">← Indietro</button><span class="count mono"></span><button class="pill btn" data-d="1">Avanti →</button></div>`);
-    const turn = (d) => { const n = Math.max(0, Math.min(spreads - 1, spread + d)); if (n !== spread) { spread = n; render(d); } };
-    this.card.querySelectorAll('[data-d]').forEach((b) => b.addEventListener('click', () => turn(+b.dataset.d)));
-    let sx = null; const al = this.card.querySelector('.album');
-    al.addEventListener('pointerdown', (e) => { sx = e.clientX; });
-    al.addEventListener('pointerup', (e) => { if (sx !== null && Math.abs(e.clientX - sx) > 40) turn(e.clientX < sx ? 1 : -1); sx = null; });
-    render(0);
+    stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
+    const key = (e) => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); show(i + 1, 1); }
+      else if (e.key === 'ArrowLeft') { e.preventDefault(); show(i - 1, -1); }
+    };
+    window.addEventListener('keydown', key);
+    this.cleanup = () => window.removeEventListener('keydown', key);
+    show(i);
   }
 
   notebooks(start = 0) {
@@ -77,12 +105,6 @@ export function daysLeft() {
   const d = new Date(WEDDING.dateISO + 'T00:00:00'), now = new Date();
   now.setHours(0, 0, 0, 0);
   return Math.round((d - now) / 86400000);
-}
-
-// a sketchy watercolour placeholder for photos not yet supplied
-function sketch(i) {
-  const pal = [['#7FA8C9', '#5E8A5A'], ['#D98A6A', '#F3D9A4'], ['#C9A44C', '#8A3A2A'], ['#3E6A6A', '#9C8AB4'], ['#E58C8A', '#F4B183']][i % 5];
-  return `linear-gradient(${150 + i * 20}deg, ${pal[0]} 0 55%, ${pal[1]} 55% 100%)`;
 }
 
 /** The wall calendar as a drawn texture: this month, past days crossed in red, and the countdown. */

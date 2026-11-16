@@ -91,19 +91,18 @@ body.focused .hot, body.focused #hint { display: none; }
 .hand { font-family: 'Caveat', cursive; }
 .mono { font-family: 'IBM Plex Mono', monospace; }
 
-.album { display: grid; grid-template-columns: 1fr 1fr; gap: 0; background: #8A2E2A; padding: 12px; border-radius: 8px; box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45); perspective: 1600px; }
-.album .page { background: #F1E6CC; min-height: 440px; padding: 22px 18px; display: grid; grid-template-rows: 1fr 1fr; gap: 14px; position: relative; transform-origin: left center; transition: transform 0.55s ease-in-out; }
-.album .page.left { border-right: 3px solid #C9B9A0; transform-origin: right center; }
-.album .page.turn-fwd { transform: rotateY(-100deg); }
-.album .page.turn-back { transform: rotateY(100deg); }
-.photo { justify-self: center; align-self: center; background: #fff; padding: 8px 8px 0; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2); position: relative; width: min(220px, 90%); }
-.photo .img { aspect-ratio: 4 / 3; background-size: cover; background-position: center; }
-.photo .cap { font: 700 20px 'Caveat', cursive; text-align: center; padding: 4px 0 6px; color: #2A1A10; }
-.photo .corner { position: absolute; width: 16px; height: 16px; background: var(--ink); }
-.photo .c1 { left: -4px; top: -4px; clip-path: polygon(0 0, 100% 0, 0 100%); }
-.photo .c2 { right: -4px; bottom: 26px; clip-path: polygon(100% 0, 100% 100%, 0 100%); }
-.album-nav { display: flex; justify-content: space-between; align-items: center; margin-top: 12px; color: var(--hud-fg); }
-.album-nav button, .tabs button { min-height: 44px; }
+/* the photo viewer: one photo at a time, as big as the screen allows, no captions */
+#overlay.viewing { padding: 0; background: rgba(16, 12, 9, 0.94); }
+#overlay.viewing #overlay-card { position: absolute; inset: 0; max-width: none; max-height: none; overflow: hidden; }
+#overlay.viewing #overlay-close { z-index: 2; top: calc(16px + env(safe-area-inset-top, 0px)); }
+.v-stage { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; padding: calc(64px + env(safe-area-inset-top, 0px)) 72px calc(64px + env(safe-area-inset-bottom, 0px)); touch-action: none; user-select: none; -webkit-user-select: none; overflow: hidden; }
+.v-blur { position: absolute; inset: -40px; background-size: cover; background-position: center; filter: blur(30px) brightness(0.45) saturate(0.9); opacity: 0.8; }
+.v-img { position: relative; max-width: 100%; max-height: 100%; object-fit: contain; border: 6px solid #F6F2EA; border-radius: 2px; box-shadow: 0 14px 50px rgba(0, 0, 0, 0.55); opacity: 0; transition: opacity 0.25s ease, transform 0.3s ease; -webkit-user-drag: none; }
+.v-img.in { opacity: 1; }
+.v-prev, .v-next { position: absolute; top: 50%; transform: translateY(-50%); z-index: 1; width: 48px; height: 48px; padding: 0; justify-content: center; font-size: 28px; line-height: 1; }
+.v-prev { left: 12px; } .v-next { right: 12px; }
+.v-count { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(14px + env(safe-area-inset-bottom, 0px)); z-index: 1; }
+.tabs button { min-height: 44px; }
 
 .notebook { display: grid; grid-template-columns: 200px 1fr; gap: 18px; }
 .tabs { display: flex; flex-direction: column; gap: 8px; }
@@ -140,8 +139,11 @@ body.focused .hot, body.focused #hint { display: none; }
   #hint { bottom: 70px; }
   #remote { right: 50%; transform: translateX(50%); bottom: calc(62px + env(safe-area-inset-bottom, 0px)); width: min(340px, calc(100% - 32px)); padding: 10px; border-radius: 20px; gap: 8px; }
   #remote .fastext button { font-size: 12px; }
-  .album { grid-template-columns: 1fr; }
-  .album .page.left { display: none; }
+  .v-stage { padding: calc(64px + env(safe-area-inset-top, 0px)) 8px calc(72px + env(safe-area-inset-bottom, 0px)); }
+  .v-img { border-width: 4px; }
+  .v-prev, .v-next { top: auto; transform: none; bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+  .v-prev { left: 16px; } .v-next { right: 16px; }
+  .v-count { bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
   .notebook { grid-template-columns: 1fr; }
   .tabs { flex-direction: row; overflow-x: auto; }
   .tabs button { font-size: 16px; white-space: nowrap; }

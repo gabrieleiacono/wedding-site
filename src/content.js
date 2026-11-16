@@ -75,22 +75,6 @@ export const FAQ = [
   ]],
 ];
 
-// Photo album: swap `src` for real photos (any orientation). Without src a sketch placeholder is drawn.
-export const PHOTOS = [
-  { caption: '[didascalia stupida]', src: null },
-  { caption: '[la prima vacanza]', src: null },
-  { caption: '[ma perché?]', src: null },
-  { caption: '[Modica, agosto]', src: null },
-  { caption: '[Darfo, Natale]', src: null },
-  { caption: '[il trasloco a Pavia]', src: null },
-  { caption: '[sul regionale per Milano]', src: null },
-  { caption: '[in bici, prima della pioggia]', src: null },
-  { caption: '[tennis: chi ha vinto?]', src: null },
-  { caption: '[la cena bruciata]', src: null },
-  { caption: '[il giorno della proposta]', src: null },
-  { caption: '[noi, adesso]', src: null },
-];
-
 // Five short stories (≤ 250 words each), once the notebooks on the desk. The notebooks made room for
 // LEGGIMI and nothing in the room opens these now (overlays.notebooks() still can), kept for another home.
 export const STORIES = [
