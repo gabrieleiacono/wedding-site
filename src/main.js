@@ -345,7 +345,7 @@ const HOT = [
     lean: LEGGIMI_LEAN, go: () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); } },
   { n: 4, id: 'tv', title: 'Televisore · Televideo', sub: 'Tutte le informazioni, pagina per pagina', at: tv.screenWorld.clone().add(new THREE.Vector3(0, 0.3, 0)), wall: 1, lean: TV_LEAN, go: () => showRemote(true) },
   { n: 5, id: 'remote', title: 'Telecomando', sub: 'Accendi il televideo', at: anchors.remote, wall: 0, lean: TV_LEAN, go: () => { sound.tvClick(); showRemote(true); } },
-  { n: 6, id: 'console', title: 'Console', sub: 'Passa su AV e gioca', at: tv.ps, wall: 1, lean: TV_LEAN, go: () => { teletext.setAV(true); showRemote(true); } },
+  { n: 6, id: 'console', title: 'Console', sub: 'Premi Game e gioca', at: tv.ps, wall: 1, lean: TV_LEAN, go: () => { teletext.setAV(true); showRemote(true); } },
   { n: 7, id: 'window', title: 'Finestra', sub: 'Alza la tapparella e affacciati', at: new THREE.Vector3(WINDOW.x1 - 0.3, 1.3, -ROOM.hz), wall: 0, lean: WINDOW_LEAN, peek: true, go: lookOut },
   { n: 8, id: 'calendar', title: 'Calendario', sub: 'Quanto manca?', at: anchors.calendar, wall: 3,
     lean: CAL_LEAN, go: () => overlays.calendar() },
@@ -501,12 +501,14 @@ typewriter.onDone = async (r) => {
 // --- TV + remote -------------------------------------------------------------------------
 const remote = $('#remote');
 const digits = remote.querySelector('.digits');
-['1', '2', '3', '4', '5', '6', '7', '8', '9', 'AV', '0', 'TXT'].forEach((k) => {
+// Game switches the set to the console's tennis; while you play the same key reads TV and brings the teletext back
+['1', '2', '3', '4', '5', '6', '7', '8', '9', 'Game', '0', 'TXT'].forEach((k) => {
   const b = document.createElement('button'); b.textContent = k; b.type = 'button';
-  b.setAttribute('aria-label', k === 'AV' ? 'Ingresso AV: la console' : k === 'TXT' ? 'Indice del televideo' : 'Cifra ' + k);
+  if (k === 'Game') b.classList.add('game-key');
+  else b.setAttribute('aria-label', k === 'TXT' ? 'Indice del televideo' : 'Cifra ' + k);
   b.addEventListener('click', () => {
     sound.tvClick();
-    if (k === 'AV') teletext.setAV(!teletext.av); else if (k === 'TXT') teletext.go('100'); else teletext.digit(k);
+    if (k === 'Game') teletext.setAV(!teletext.av); else if (k === 'TXT') teletext.go('100'); else teletext.digit(k);
     if (!teletext.buf) setPad(false); // a page (or the console) has come up: fold the pad and give the TV back its room
     refreshRemote();
   });
@@ -540,6 +542,10 @@ function refreshRemote() {
     f.appendChild(b);
   });
   remote.querySelector('.av-keys').hidden = !teletext.av;
+  remote.querySelectorAll('.game-key').forEach((b) => {
+    b.textContent = teletext.av ? 'TV' : 'Game';
+    b.setAttribute('aria-label', teletext.av ? 'Torna al televideo' : 'Gioca a tennis con la console');
+  });
   remote.querySelectorAll('[data-sub]').forEach((b) => { b.disabled = teletext.subCount() < 2; });
   // ▶ lights up while the page has more subpages to read
   const sp = teletext.subPos();
@@ -556,6 +562,7 @@ function showRemote(on) {
   // a phone has room for one short line under the remote, and no keyboard to type on
   if (on) $('#help').textContent = getComputedStyle(padToggle).display !== 'none' ? 'Colori o 123 per le pagine · A+ testo grande' : 'Digita tre cifre (anche da tastiera) · i tasti colorati portano alle pagine';
 }
+remote.querySelector('.av-keys .game-key').addEventListener('click', () => { sound.tvClick(); teletext.setAV(false); });
 remote.querySelectorAll('[data-av]').forEach((b) => {
   const v = +b.dataset.av;
   b.addEventListener('pointerdown', () => { teletext.tennis.input = v; });
