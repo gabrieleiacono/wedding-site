@@ -16,14 +16,13 @@ const SHADOW_AT = [2, 2], SHADOW = 'rgba(8, 30, 14, 0.32)';
 const hex = (h) => [parseInt(h.slice(1, 3), 16), parseInt(h.slice(3, 5), 16), parseInt(h.slice(5, 7), 16)];
 const tones = (light, base, dark) => [hex(light), hex(base), hex(dark)];
 
-// TU: red polo with a white collar, white shorts, dark hair under a white headband, and a wooden racket like the one on the wall
+// TU: red polo, white shorts, dark hair under a white headband, and a wooden racket like the one on the wall
 // CONSOLE: sky-blue shirt, navy shorts, a navy sun visor and a fair ponytail, and a black graphite racket
 export const KITS = {
   me: {
     skin: tones('#F6CFA4', '#E2AE80', '#B07A52'),
     hair: tones('#7A4E2E', '#53321D', '#331E11'),
     shirt: tones('#F2664F', '#D3302A', '#8E1C19'),
-    collar: tones('#FFFFFF', '#F1EFE6', '#BDB9AC'),
     shorts: tones('#FFFFFF', '#E9E7DE', '#AFAB9E'),
     band: tones('#FFFFFF', '#F4F2EA', '#C9C5B8'),
     socks: tones('#FFFFFF', '#F1EFE6', '#C2BEB2'),
@@ -37,7 +36,6 @@ export const KITS = {
     skin: tones('#F0C298', '#D49E72', '#A06E48'),
     hair: tones('#F6DC8E', '#D9B256', '#A07E30'),
     shirt: tones('#7FE6F6', '#2DB6D8', '#17789A'),
-    collar: tones('#3E4E92', '#24305E', '#151C3C'),
     shorts: tones('#3E4E92', '#24305E', '#151C3C'),
     visor: tones('#4A5BA6', '#24305E', '#151C3C'),
     socks: tones('#FFFFFF', '#F1EFE6', '#C2BEB2'),
@@ -128,7 +126,6 @@ export class PlayerSprite {
   /** shade one tone set by the shape's normal, turned into court coordinates */
   tone(set, n) {
     const l = (n[0] * LIGHT[0] + n[1] * LIGHT[1]) * this.s;
-    const r = n.length > 2 && n[2] !== undefined ? 1 : 1; void r;
     return l > 0.38 ? set[0] : l < -0.42 ? set[2] : set[1];
   }
   /** the colour of one art pixel at local (u, v), or 'hole' for the racket's open strings, or null */
