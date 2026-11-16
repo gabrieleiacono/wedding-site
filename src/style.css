@@ -52,7 +52,7 @@ body.focused .hot, body.focused #hint { display: none; }
 #remote .digits button, #remote .av-keys button { height: 40px; border: none; border-radius: 10px; background: #4A4A50; color: #F3EEE4; font: 700 15px 'IBM Plex Mono', monospace; cursor: pointer; }
 #remote button:active { transform: translateY(1px); background: #5A5A60; }
 #remote .fastext { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-#remote .fastext button { height: 36px; border: none; border-radius: 8px; font: 700 9px 'IBM Plex Mono', monospace; cursor: pointer; overflow: hidden; }
+#remote .fastext button { height: 36px; padding: 0 2px; border: none; border-radius: 8px; font: 700 10px 'IBM Plex Mono', monospace; white-space: nowrap; cursor: pointer; overflow: hidden; }
 #remote .av-keys { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
 #remote .av-keys[hidden] { display: none; }
 /* the av row's own TV key, so a phone can leave the game without opening the number pad (where the other one is) */
@@ -139,7 +139,7 @@ body.focused .hot, body.focused #hint { display: none; }
   #back { top: calc(12px + env(safe-area-inset-top, 0px)); } /* no title above it on a phone */
   #hint { bottom: 70px; }
   #remote { right: 50%; transform: translateX(50%); bottom: calc(62px + env(safe-area-inset-bottom, 0px)); width: min(340px, calc(100% - 32px)); padding: 10px; border-radius: 20px; gap: 8px; }
-  #remote .fastext button { font-size: 10px; }
+  #remote .fastext button { font-size: 12px; }
   .album { grid-template-columns: 1fr; }
   .album .page.left { display: none; }
   .notebook { grid-template-columns: 1fr; }
