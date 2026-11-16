@@ -80,6 +80,9 @@ export function buildPages(guests = [], missing = '', layout = LAYOUT.normal) {
   const g600 = [...guestPages, ...msgPages].map((r) => [...r, E(), L(`SÌ: ${yes.length} ${yes.length === 1 ? 'persona' : 'persone'}`, Y), ...lines(['Si aggiorna da sola a ogni risposta.'], G)]);
 
   const up = (t) => t.toUpperCase();
+  // `title` is the page's name on the coloured keys, on the screen and on the remote: a short Televideo-style
+  // name, at most 6 letters, so it fits its key in full teletext letters with room either side (888 and the
+  // missing page are never on a key)
   return {
     '100': { title: 'INDICE', heading: 'INDICE', fast: ['101', '600', '200', '700'], logo: true, subs: [[
       E(),
@@ -88,14 +91,14 @@ export function buildPages(guests = [], missing = '', layout = LAYOUT.normal) {
         .map(([t, n], i) => L(dots(t, n, Math.min(31, WD - 4)), i % 2 ? C : W, n)),
       E(), ...lines(['Digita il numero di pagina.'], G), ...lines(['Una pagina è nascosta...'], M),
     ]] },
-    '101': page('PROGRAMMA', up(PROGRAMME.title), ['100', '200', '400', '600'], [
+    '101': page('ORARI', up(PROGRAMME.title), ['100', '200', '400', '600'], [
       [L(up(PROGRAMME.day), C), ...PROGRAMME.rows.flatMap(([h, t]) => wrap(t, WD - 7).map((l, i) => L((i ? '' : h).padEnd(7) + l)))],
       ...paras(PROGRAMME.text),
     ]),
-    '200': page('ARRIVARE', up(TRAVEL.title), ['100', '101', '300', '700'], paras(TRAVEL.text)),
+    '200': page('ARRIVO', up(TRAVEL.title), ['100', '101', '300', '700'], paras(TRAVEL.text)),
     '300': page('METEO', up(WEATHER.title), ['100', '101', '200', '400'], [[E(), E(), E()], ...paras(WEATHER.text)], { weather: true }),
-    '400': page('DRESS CODE', up(DRESS.title), ['100', '101', '300', '700'], paras(DRESS.text)),
-    '500': page('RISPONDI', up(RSVP.title), ['100', '600', '101', '700'], paras(RSVP.text)),
+    '400': page('ABITI', up(DRESS.title), ['100', '101', '300', '700'], paras(DRESS.text)),
+    '500': page('RSVP', up(RSVP.title), ['100', '600', '101', '700'], paras(RSVP.text)),
     '600': { title: 'OSPITI', heading: up(GUESTBOOK.title), fast: ['100', '500', '101', '700'], auto: true, subs: g600 },
     '700': page('FAQ', 'FAQ', ['100', '500', '200', '400'], FAQ.map(([q, a]) => [...para(q, C), ...a.flatMap((t) => para(t))])),
     '888': page('SOTTOTITOLI', 'SOTTOTITOLI', ['100', '101', '600', '700'], [[
@@ -205,12 +208,13 @@ export class Teletext {
     }
     if (cur.logo && !this.big) this.mosaicVilla(29, 15);
     if (cur.weather) this.mosaicSun(14, 4);
-    // fastext bar: each label centred in its coloured key, squeezed a little if it would not fit
+    // fastext bar: each short name centred in its coloured key, in full teletext cells (squeezed only if a
+    // name were ever longer than 7 letters)
     const labels = cur.fast.map((p) => (all[p]?.title ?? p));
     const bw = (COLS * CW) / 4;
     labels.forEach((lab, i) => {
       ctx.fillStyle = FAST[i][0]; ctx.fillRect(i * bw + 4, 23 * CH, bw - 8, CH * 1.6);
-      const t = lab.slice(0, 10), w = Math.min(t.length * CW, bw - 20);
+      const t = lab.slice(0, 10), w = Math.min(t.length * CW, bw - 48);
       this.text(0, 0, t, FAST[i][1], { x: i * bw + (bw - w) / 2, y: 23.3 * CH, cw: w / t.length });
     });
     this.drawScan();
