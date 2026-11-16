@@ -416,6 +416,16 @@ function clickAt(x, y) {
   const hitRoom = ray.intersectObject(room, true).find((h) => shown(h.object));
   if (view.group.visible && view.pick(ray, hitRoom ? hitRoom.distance : Infinity)) return;
   if (shelfView.active) { if (!shelfView.multi) shelfView.tap(ray); return; }
+  // the set's own power button (a tap near it is enough, it is small): on, it switches the TV off and, up
+  // close, takes you back to the room like the remote's POWER; off, it switches it back on where you stand
+  if ((!rig.focus || rig.focus.lean === TV_LEAN) && hitRoom && tv.isTV(hitRoom.object)) {
+    const b = tv.powerButtonWorld.project(camera);
+    if (Math.hypot((b.x + 1) / 2 * innerWidth - x, (1 - b.y) / 2 * innerHeight - y) < 24) {
+      tv.pressPowerButton();
+      if (tv.on) tvOff(); else { sound.tvClick(); tv.setPower(true); }
+      return;
+    }
+  }
   // in front of the TV, a tap on the screen turns to the next subpage (back to the first after the last)
   if (rig.focus?.lean === TV_LEAN && !teletext.av && ray.intersectObject(tv.screen).length && teletext.subCount() > 1) { sound.tvClick(); teletext.step(1); return; }
   // up close to the bass, a tap plucks the string nearest to it
@@ -512,7 +522,8 @@ function setPad(open) {
   if (rig.focus) { rig.from = { pos: camera.position.clone(), target: camera.position.clone().add(camera.getWorldDirection(new THREE.Vector3())), ...rig.lens }; rig.t = 0; }
 }
 // POWER switches the set off and puts the remote down: the same as going back to the room
-remote.querySelector('.power-key').addEventListener('click', () => { sound.tvClick(); tv.setPower(false); unfocus(); });
+function tvOff() { sound.tvClick(); tv.setPower(false); if (rig.focus?.lean === TV_LEAN) unfocus(); }
+remote.querySelector('.power-key').addEventListener('click', tvOff);
 padToggle.addEventListener('click', () => { sound.tvClick(); setPad(!remote.classList.contains('pad-open')); });
 remote.querySelectorAll('[data-sub]').forEach((b) => b.addEventListener('click', () => { sound.tvClick(); teletext.step(+b.dataset.sub); }));
 // SIZE, as on a real remote: on a phone it redraws the body of the pages in bigger letters (CSS shows it only there)

@@ -83,7 +83,7 @@ export function buildTV(room, teletext) {
   tv.add(new THREE.Mesh(merge(slots), makeInk({ color: '#ffffff', vertexColors: true, wash: 0.9 })));
   box(0.006, 0.05, 0.14, M.black, -0.253, 0.05, 0.0, tv);
   for (let i = 0; i < 5; i++) box(0.01, 0.012, 0.016, bezMat, -0.258, 0.042, -0.05 + i * 0.024, tv);
-  box(0.012, 0.022, 0.03, M.grey, -0.258, 0.05, -0.33 - 0.01, tv);
+  const powerBtn = box(0.012, 0.022, 0.03, M.grey, -0.258, 0.05, -0.33 - 0.01, tv); // the mains switch, beside the LED
   box(0.006, 0.01, 0.01, makeInk({ color: '#E2412F', emissive: 1.5 }), -0.262, 0.05, -0.3, tv);
   const badge = new THREE.Mesh(new THREE.PlaneGeometry(0.14, 0.014), makeScreen(labelTexture('STEREO  ·  COLOR 32', 512, 52, '#D8D4CA', '#45444A')));
   badge.position.set(-0.2665, 0.083, 0.24); badge.rotation.y = -Math.PI / 2; tv.add(badge);
@@ -137,12 +137,17 @@ export function buildTV(room, teletext) {
   return {
     screen, screenWorld, glow, isTV,
     ps: new THREE.Vector3(x - 0.24, 0.37, z + 0.24),
+    /** Where the set's own power button is, in the room: a tap near it presses it. */
+    get powerButtonWorld() { return powerBtn.getWorldPosition(new THREE.Vector3()); },
+    /** The button goes in under the finger and springs back. */
+    pressPowerButton() { pw.pressed = performance.now(); },
     get on() { return pw.on; },
     /** 0 (off) … 1 (on), following the switch-off and switch-on animation: the room glow fades with it. */
     get power() { return pw.k; },
     setPower(on) { pw.on = on; },
     tick(now) {
       powerFrame(now);
+      powerBtn.position.x = -0.258 + (pw.pressed && now - pw.pressed < 160 ? 0.005 : 0);
       const d = new Date();
       const h = d.getHours() % 12 + d.getMinutes() / 60, m = d.getMinutes() + d.getSeconds() / 60;
       hourHand.rotation.x = -h / 12 * Math.PI * 2; minHand.rotation.x = -m / 60 * Math.PI * 2;
