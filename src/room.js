@@ -29,10 +29,8 @@ export const M = {
   white: makeInk({ color: '#F4F0E6', wash: 0.3 }),
   brass: makeInk({ color: '#C9A44C', wash: 0.7 }),
   red: makeInk({ color: '#B6402A', wash: 0.7 }),
-  albumRed: makeInk({ color: '#8A2E2A', wash: 0.75 }),
   blue: makeInk({ color: '#2F4F6E', wash: 0.7 }),
   green: makeInk({ color: '#3E6B4A', wash: 0.7 }),
-  cork: makeInk({ color: '#B88A55', wash: 0.65 }),
   shutter: makeInk({ color: '#D8CDB8', wash: 0.5, spacing: 0.006 }),
   curtain: makeInk({ color: '#FBF4E6', wash: 0.2, transparent: true, opacity: 0.3, side: THREE.DoubleSide, emissive: 0.35, emissiveColor: '#FFE2C0' }),
   sirio: makeInk({ color: '#F2F0EA', wash: 0.3 }),
@@ -214,17 +212,6 @@ function buildDesk(room, anchors) {
   box(0.04, top - 0.035, 0.04, M.walnutY, dw / 2 - 0.04, (top - 0.035) / 2, dz - dd / 2 + 0.04, g);
   box(0.9, 0.09, 0.012, M.walnut, 0.25, top - 0.08, dz + dd / 2 - 0.02, g);
 
-  // photo album, desk left
-  const album = new THREE.Group();
-  album.position.set(-0.47, top, -1.42); album.rotation.y = 0.22;
-  box(0.32, 0.045, 0.25, M.albumRed, 0, 0.0225, 0, album);
-  box(0.30, 0.035, 0.235, M.beige, 0.012, 0.0225, 0, album);
-  for (const [x, z, r] of [[0.1, -0.13, 0.3], [-0.05, -0.135, -0.2], [0.17, 0.05, 1.3]]) {
-    const p = box(0.09, 0.002, 0.07, M.white, x, 0.03, z, album); p.rotation.y = r;
-  }
-  g.add(album);
-  anchors.album = new THREE.Vector3(-0.47, top + 0.06, -1.42);
-
   // the remote, near the edge
   const remote = new THREE.Group();
   remote.position.set(0.3, top, -1.2); remote.rotation.y = -0.35;
@@ -251,14 +238,7 @@ function buildDesk(room, anchors) {
     p.rotation.set((Math.random() - 0.5) * 0.4, 0, (Math.random() - 0.5) * 0.4);
   }
 
-  // cork board with postcards, wall left of the window
-  box(0.62, 0.46, 0.02, M.cork, -1.25, 1.62, -ROOM.hz + 0.012, g);
-  box(0.66, 0.5, 0.012, M.frame, -1.25, 1.62, -ROOM.hz + 0.004, g);
-  const pc = ['#E58C8A', '#F4B183', '#9C8AB4', '#F4F0E6', '#7FA8C9'];
-  pc.forEach((c, i) => {
-    const p = box(0.13, 0.09, 0.003, makeInk({ color: c, wash: 0.65 }), -1.47 + i * 0.11, 1.62 + (i % 2 ? 0.1 : -0.08), -ROOM.hz + 0.024, g);
-    p.rotation.z = (Math.random() - 0.5) * 0.3;
-  });
+  // the cork board with their photos, wall left of the window: bacheca.js
 }
 
 function buildWestWall(room, anchors) {

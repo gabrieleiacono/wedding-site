@@ -5,7 +5,7 @@ Turn around the room; every piece of wedding information lives in an object.
 
 - **Typewriter**: RSVP (5 questions on the LCD, type with your keyboard)
 - **TV + remote**: teletext pages (100 index, 101 programme, 200 travel, 300 weather, 400 dress code, 500 RSVP, 600 live guestbook, 700 FAQ, 888 hidden; a page too long for one screen is split into subpages, turned with ◀ ▶ on the remote, the arrow keys or a tap on the screen; a yellow CONTINUA bar under the last line says there is more, and the remote's ▶ lights up). The coloured keys, on the screen and on the remote, carry short Televideo-style names (each page's `title` in `teletext.js`, at most 6 letters: INDICE, ORARI, ARRIVO, METEO, ABITI, RSVP, OSPITI, FAQ). The remote's Game key switches to the console's tennis game (in English, PLAYER against CPU, like the old games: ▲▼, the arrow keys or W/S move your player); while you play it reads TV and brings the teletext back, and on a phone a second TV key sits beside ▲▼ so the number pad can stay folded. The two players are pixel-art sprites seen from above that run and swing forehands and two-handed backhands (`src/tennis-players.js`). The remote's red POWER key switches the set off (the picture squeezes to a line and a dot, as on a CRT) and takes you back to the room; going back to the TV switches it on again. The set's own power button (the grey square beside the red LED, bottom left of the front) does the same, from the room or up close; on a TV that is off it switches it back on. On a phone the remote stays small while you read (page display, ◀ ▶, coloured keys): its number pad opens with 123 and folds again once the page comes up, and A+ (the old remotes' SIZE key) redraws the pages in 28 bigger columns.
-- **Album**: photos
+- **Bacheca**: the cork board on the desk wall, between the bass and the window, with their photos pinned to it (no captions; up to 12 on the board, spread through the set). Tap it to go up close, then tap a photo: it opens full screen, and every photo, pinned or not, can be browsed with ‹ ›, the arrow keys or a swipe; ✕, Esc or a tap beside the photo closes it and leaves you at the board.
 - **LEGGIMI**: the glowing gold book lying on the desk, right of the typewriter, where the notebooks used to be. Tap it and it props itself up, cover to you, and its text opens
 - **Bookshelf**: 383 real books in their Italian editions. Tap a book (or the Aa hotspot) to get close to a shelf: drag along it, ▲▼ to change shelf, author chips to jump, pinch or wheel to zoom. Tap a book to take it out and read its library card. On the third shelf a friend's novel, *La causa dei vivi* (Anna Gabriella Rusconi, Cronache Ribelli), stands face-out on a little stand: taken out, it turns to show its cover (tap it to turn it over) and its card links to the publisher's page. On the second shelf from the bottom, right, lies a bottle-green tennis racket bag
 - **Bike**: a yellow Wheeler 2100 in the corner between the TV and the shelf. Tap it, the pedals above all, and the pedals get a push backwards (one tap = one turn), clicking like a freewheel at exactly the speed they turn; taps add up. Tap it faster than 5 a second (8 taps within 1.5 s) and the chain falls off the ring, for good until the page is reloaded.
@@ -30,12 +30,12 @@ python3 -m http.server 8000
 # open http://localhost:8000
 ```
 
-Deep links for testing: `?wall=0..3` faces a wall, `?focus=typewriter|tv|album|leggimi|calendar|...` opens an object, `?shelf=0..3` opens a shelf close-up (0 = top) and `&book=N` takes out its Nth book. `?pitch=-40` starts looking that many degrees down (the lean over the desk), Dragging moves the room with your finger both ways (drag up to look down); `?look=tilt` flips the vertical back so dragging down looks down.
+Deep links for testing: `?wall=0..3` faces a wall, `?focus=typewriter|tv|board|leggimi|calendar|...` opens an object, `?shelf=0..3` opens a shelf close-up (0 = top) and `&book=N` takes out its Nth book. `?pitch=-40` starts looking that many degrees down (the lean over the desk), Dragging moves the room with your finger both ways (drag up to look down); `?look=tilt` flips the vertical back so dragging down looks down.
 
 ## Edit the content
 
 All text guests read is in `src/content.js` (anything in [square brackets] is a placeholder).
-Photos: set `src` on each entry of `PHOTOS`.
+Photos: put the originals in a folder and run `python3 tools/build-photos.py that/folder`. It turns each one upright (EXIF), strips its metadata (GPS too), writes a 1600 px copy for the viewer and a 480 px one for the board to `assets/photos/`, and lists them in `src/photos.js`. File-name order is the browsing order.
 
 ## RSVPs to a Google Sheet
 
@@ -73,7 +73,9 @@ Without it, RSVPs are kept in the claude.ai preview's database, or in the browse
 | `src/tennisbag.js` | The tennis racket bag on the second shelf from the bottom (right-hand bay), from photos of real six-racket bags (`wedding-site-shots/tennis-bag/refs` in the project files): a superquadric body, padded and wedge-shaped like a real racket bag (tall and round at the racket-head end, the top sloping down to a handle end less than half as high and a little narrower) (`BAG` holds its size, `C` its colours), with cream piping round the side panels, two main zips with pullers, a padded front pocket with its zip and a plain badge, carry handles sewn on with box-and-cross stitching and a wrapped grip, and a shoulder strap on D-rings with its pad over the front edge. Bands, cords and small parts are laid on the surface along paths in its (θ, φ) coordinates, then everything is merged into one vertex-coloured mesh |
 | `src/geo.js` | Noise and geometry helpers shared by the landscape and the animals |
 | `src/leggimi.js` | The LEGGIMI book on the desk: spine from `spines.js`, a cover drawn in canvas, and how it props itself up when tapped |
-| `src/overlays.js` | Album, LEGGIMI, cards, calendar, credits (and the notebooks' stories, not opened from the room any more) |
+| `src/bacheca.js` | The cork board with the photos pinned to it: cork and prints drawn into one canvas texture (`layout()` places the prints, `MAX_PINNED` caps them), push pins as meshes, `photoAt()` finds the print under a tap |
+| `src/photos.js` | The photo list, made by `tools/build-photos.py` |
+| `src/overlays.js` | The photo viewer, LEGGIMI, cards, calendar, credits (and the notebooks' stories, not opened from the room any more) |
 | `src/audio.js` | Synthesised sounds (including the bicycle freewheel's ratchet, a plucked bass string) |
 | `src/store.js` | RSVP storage (Google Sheet / claude.ai / local) |
 | `src/main.js` | Lights, camera rig, hotspots, frame loop |

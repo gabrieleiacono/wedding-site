@@ -7,6 +7,7 @@ import { buildBookshelf } from './bookshelf.js';
 import { buildBike } from './bike.js';
 import { buildRacket } from './racket.js';
 import { buildBass } from './bass.js';
+import { buildBacheca, BOARD } from './bacheca.js';
 import { buildPrints, buildBin, buildRug } from './keepsakes.js';
 import { buildLeggimi } from './leggimi.js';
 import { ShelfView } from './shelfview.js';
@@ -80,6 +81,7 @@ racket.hooks.knock = (v) => sound.racket(v);
 const leggimi = buildLeggimi(room); // the glowing book, on the desk right of the typewriter
 const bass = buildBass(room); // the bass on its hanger, in the corner of the desk wall by the door
 bass.hooks.pluck = (i) => sound.pluck(i);
+const board = buildBacheca(room); // the cork board with their photos, between the bass and the window
 const prints = buildPrints(room); // two prints, right of the window: Valle Camonica and Modica
 buildBin(room); // the wicker bin of drafts, right of the desk (just to look at)
 buildRug(room); // the frazzata on the floor
@@ -324,7 +326,6 @@ const WINDOW_LEAN = () => {
   const tall = portrait();
   return { pos: WINDOW_EYE, target: WINDOW_EYE.clone().add(lookDir(rig.peekS.yaw, -0.1 + rig.peekS.pitch)), fov: tall ? 74 : 62 };
 };
-const ALBUM_LEAN = () => frameView({ pts: around(anchors.album, 0.19, 0.03, 0.17), dir: elev(52, 0.25), fov: 45 });
 const CAL_LEAN = () => frameView({ pts: around(anchors.calendar, 0.01, 0.26, 0.2), dir: new THREE.Vector3(-1, -0.04, 0), fov: 45 });
 // LEGGIMI: over the desk, the book propped up with its cover to you
 const LEGGIMI_LEAN = () => frameView({ pts: around(leggimi.at.clone().add(new THREE.Vector3(0, 0.06, 0)), 0.13, 0.09, 0.15), dir: elev(45, -0.25), fov: 45 });
@@ -332,6 +333,9 @@ const LEGGIMI_LEAN = () => frameView({ pts: around(leggimi.at.clone().add(new TH
 // The bass: all of it, hanging, from a little to the right, so the strings catch the light. Taps pluck it.
 const BASS_HOT = { id: 'bass', wall: 0, lean: () => frameView({ pts: around(bass.center, 0.17, 0.585, 0.05), dir: new THREE.Vector3(-0.3, -0.06, -1).normalize(), fov: portrait() ? 50 : 40, fill: 0.97 }),
   go: () => { $('#help').hidden = false; $('#help').textContent = 'Tocca una corda per suonarla'; } };
+// The cork board, straight on; a tap on a print opens the photos there, and closing them comes back here.
+const BOARD_LEAN = () => frameView({ pts: around(board.center, BOARD.w / 2 + 0.03, BOARD.h / 2 + 0.03, 0.01), dir: new THREE.Vector3(0, -0.04, -1).normalize(), fov: portrait() ? 50 : 40, fill: portrait() ? 1 : 0.92 }); // a phone: as wide as it goes, the prints are small
+const boardHelp = () => { $('#help').hidden = false; $('#help').textContent = `Tocca una foto per sfogliarle tutte (${board.count})`; };
 // The two prints, straight on.
 const PRINTS_HOT = { id: 'prints', wall: 0, lean: () => frameView({ pts: around(prints.center, 0.4, 0.25, 0.02), dir: new THREE.Vector3(0, -0.04, -1).normalize(), fov: portrait() ? 50 : 40 }) };
 
@@ -339,8 +343,8 @@ const PRINTS_HOT = { id: 'prints', wall: 0, lean: () => frameView({ pts: around(
 const HOT = [
   { n: 1, id: 'typewriter', title: 'Macchina da scrivere', sub: 'Rispondi all\'invito', at: typewriter.world, wall: 0,
     lean: TYPEWRITER_LEAN, go: startTyping },
-  { n: 2, id: 'album', title: 'Album fotografico', sub: 'Le nostre foto peggiori', at: anchors.album, wall: 0,
-    lean: ALBUM_LEAN, go: () => overlays.album() },
+  { n: 2, id: 'board', title: 'Bacheca', sub: 'Le nostre foto', at: board.center.clone().add(new THREE.Vector3(0, BOARD.h / 2 - 0.06, 0)), wall: 0,
+    lean: BOARD_LEAN, go: boardHelp },
   { n: 3, id: 'leggimi', title: 'LEGGIMI', sub: 'Un libro brilla sulla scrivania', at: leggimi.at, wall: 0,
     lean: LEGGIMI_LEAN, go: () => { pullBook(true); setTimeout(() => overlays.leggimi(), 650); } },
   { n: 4, id: 'tv', title: 'Televisore · Televideo', sub: 'Tutte le informazioni, pagina per pagina', at: tv.screenWorld.clone().add(new THREE.Vector3(0, 0.3, 0)), wall: 1, lean: TV_LEAN, go: () => showRemote(true) },
@@ -382,7 +386,7 @@ function focus(h) {
   rig.peek.yaw = rig.peek.pitch = rig.peekS.yaw = rig.peekS.pitch = 0;
   document.body.classList.add('focused');
   $('#back').hidden = false;
-  view.leaning = ['typewriter', 'album', 'leggimi', 'window'].includes(h.id);
+  view.leaning = ['typewriter', 'leggimi', 'window'].includes(h.id);
 }
 function unfocus(quick) {
   if (!rig.focus) return;
@@ -405,7 +409,7 @@ function unfocus(quick) {
   if (h.id === 'shelf') shelfView.leave();
 }
 $('#back').addEventListener('click', () => unfocus());
-overlays.onClose = () => { if (!shelfView.active) unfocus(); };
+overlays.onClose = () => { if (rig.focus?.id === 'board') boardHelp(); else if (!shelfView.active) unfocus(); };
 
 function clickAt(x, y) {
   const ndc = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
@@ -430,9 +434,13 @@ function clickAt(x, y) {
   if (rig.focus?.lean === TV_LEAN && !teletext.av && ray.intersectObject(tv.screen).length && teletext.subCount() > 1) { sound.tvClick(); teletext.step(1); return; }
   // up close to the bass, a tap plucks the string nearest to it
   if (rig.focus === BASS_HOT) { if (hitRoom && bass.isBass(hitRoom.object)) bass.pluck(hitRoom.point); return; }
+  // up close to the cork board, a tap on a print opens the photos on it (anywhere else on the board, on the first)
+  if (rig.focus?.id === 'board') { if (hitRoom && board.isBoard(hitRoom.object)) openPhotos(board.photoAt(hitRoom) ?? 0); return; }
   if (rig.focus) return;
   // a tap on the bass takes you up to it, and plucks a string on the way
   if (hitRoom && bass.isBass(hitRoom.object)) { activate(BASS_HOT); bass.pluck(hitRoom.point); return; }
+  // a tap on the cork board takes you up to it
+  if (hitRoom && board.isBoard(hitRoom.object)) { activate(HOT.find((h) => h.id === 'board')); return; }
   // a tap on the prints takes you up to them
   if (hitRoom && prints.isPrints(hitRoom.object)) { activate(PRINTS_HOT); return; }
   // a tap on the bike (the pedals above all) pushes the pedals back, freewheeling; too many, too fast, and the chain comes off
@@ -469,6 +477,8 @@ function clickAt(x, y) {
   }
   if (best) activate(best);
 }
+
+function openPhotos(i) { $('#help').hidden = true; overlays.photos(i); }
 
 // --- typewriter ------------------------------------------------------------------------
 const typer = $('#typer');
@@ -841,4 +851,4 @@ if (params.has('shelf')) setTimeout(() => {
   if (params.has('book')) setTimeout(() => shelfView.pull(shelfView.row.books[+params.get('book')] ?? shelfView.row.books[0]), 900);
 }, 300);
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
-window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView, bike, racket, bass, BASS_HOT, PRINTS_HOT, sound };
+window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView, bike, racket, bass, BASS_HOT, PRINTS_HOT, board, openPhotos, sound };
