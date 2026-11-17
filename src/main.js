@@ -476,8 +476,9 @@ function startTyping() {
   twRest = null; // measure the resting close-up afresh, before the keyboard comes up
   typewriter.active = true;
   if (typewriter.finished) typewriter.reset();
-  $('#help').hidden = false;
-  $('#help').textContent = narrowScreen() ? 'Scrivi la risposta e premi Invio' : 'Scrivi con la tastiera · Invio per la domanda dopo · Esc per uscire';
+  // on a phone the keyboard says it all, and a hint line would only sit over the sheet you're typing on
+  $('#help').hidden = narrowScreen();
+  $('#help').textContent = 'Scrivi con la tastiera · Invio per la domanda dopo · Esc per uscire';
   setTimeout(() => typer.focus({ preventScroll: true }), 50);
 }
 function stopTyping() { typewriter.active = false; typer.blur(); }
