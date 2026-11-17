@@ -3,13 +3,15 @@
 
     python3 tools/build-photos.py path/to/originals
 
-For every image in the folder (sorted by file name, which is the order guests browse them in):
+For every image in the folder (sorted by file name, which is the order guests browse them in;
+exact duplicates are skipped):
   - turns it upright from its EXIF orientation, then drops all metadata (GPS included);
   - writes assets/photos/l/NN.jpg, at most 1600 px on the long side, for the viewer;
   - writes assets/photos/s/NN.jpg, at most 480 px on the long side, for the board and as the
     viewer's placeholder while the big one loads;
 and writes src/photos.js with the list (paths and sizes). Running it again replaces them all.
 """
+import hashlib
 import json
 import pathlib
 import sys
@@ -29,7 +31,14 @@ EXTS = {'.jpg', '.jpeg', '.png', '.webp', '.heic', '.heif', '.tif', '.tiff'}
 
 
 def main(src):
-    files = sorted(p for p in pathlib.Path(src).iterdir() if p.suffix.lower() in EXTS)
+    files, seen = [], set()
+    for p in sorted(p for p in pathlib.Path(src).iterdir() if p.suffix.lower() in EXTS):
+        h = hashlib.sha1(p.read_bytes()).hexdigest()
+        if h in seen:
+            print(f'{p.name}: same file as an earlier one, skipped')
+            continue
+        seen.add(h)
+        files.append(p)
     if not files:
         sys.exit(f'no photos in {src}')
     for name in SIZES:
