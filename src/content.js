@@ -88,7 +88,7 @@ export const STORIES = [
 // The glowing "LEGGIMI" book on the desk.
 export const LEGGIMI = {
   title: 'Leggimi',
-  body: 'Benvenuti nell’anticamera del nostro matrimonio! Questo è un luogo virtuale per prepararci insieme a questo magico avvenimento. Non siate timidi e interagite con gli oggetti della stanza.\nLa macchina da scrivere serve per confermare la vostra partecipazione, mentre il televisore è sintonizzato su un televideo pieno zeppo di informazioni utili.\n\nnella libreria dietro di voi ci sono alcuni degli autori che amiamo di più e anche qualche piccolo easter egg, sentitevi liberi di spulciarla :)',
+  body: 'Benvenuti nell’anticamera del nostro matrimonio! Questo è un luogo virtuale per prepararci insieme a questo magico avvenimento. Non siate timidi e interagite con gli oggetti della stanza.\nLa macchina da scrivere serve per confermare la vostra presenza, mentre il televisore è sintonizzato su un televideo pieno zeppo di informazioni utili.\n\nNella libreria dietro di voi ci sono alcuni degli autori che amiamo di più e anche qualche piccolo easter egg, sentitevi liberi di spulciarla :)',
 };
 
 export const CREDITS = [
