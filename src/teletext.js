@@ -3,7 +3,7 @@
 // The canvas is drawn at twice its 800×600 layout so the text stays sharp on a retina screen.
 // SIZE (the remote's key, on a phone) redraws the body of each page in BIG_COLS bigger columns.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
-import { WEDDING, PROGRAMME, TRAVEL, WEATHER, DRESS, RSVP, GUESTBOOK, FAQ } from './content.js';
+import { WEDDING, PROGRAMME, TRAVEL, WEATHER, DRESS, RSVP, GUESTBOOK, FAQ, GIFTS } from './content.js';
 import { Tennis } from './tennis.js';
 import { romeTime } from './rometime.js';
 
@@ -88,7 +88,9 @@ export function buildPages(guests = [], missing = '', layout = LAYOUT.normal) {
     '100': { title: 'INDICE', heading: 'INDICE', fast: ['101', '600', '200', '700'], logo: true, subs: [[
       E(),
       ...[[PROGRAMME.title, '101'], [TRAVEL.title, '200'], [WEATHER.title, '300'], [DRESS.title, '400'],
-        [RSVP.title, '500'], [GUESTBOOK.title, '600'], ['Domande frequenti', '700']]
+        [RSVP.title, '500'], [GUESTBOOK.title, '600'], ['Domande frequenti', '700'],
+        // in SIZE's 26 columns the full name leaves no room for the dots, so the index shortens it there
+        [GIFTS.title.length + 6 > WD - 4 ? 'Lista nozze' : GIFTS.title, '800']]
         .map(([t, n], i) => L(dots(t, n, Math.min(31, WD - 4)), i % 2 ? C : W, n)),
       E(), ...lines(['Digita il numero di pagina.'], G), ...lines(['Una pagina è nascosta...'], M),
     ]] },
@@ -101,7 +103,8 @@ export function buildPages(guests = [], missing = '', layout = LAYOUT.normal) {
     '400': page('ABITI', up(DRESS.title), ['100', '101', '300', '700'], paras(DRESS.text)),
     '500': page('RSVP', up(RSVP.title), ['100', '600', '101', '700'], paras(RSVP.text)),
     '600': { title: 'OSPITI', heading: up(GUESTBOOK.title), fast: ['100', '500', '101', '700'], auto: true, subs: g600 },
-    '700': page('FAQ', 'FAQ', ['100', '500', '200', '400'], FAQ.map(([q, a]) => [...para(q, C), ...a.flatMap((t) => para(t))])),
+    '700': page('FAQ', 'FAQ', ['100', '200', '400', '800'], FAQ.map(([q, a]) => [...para(q, C), ...a.flatMap((t) => para(t))])),
+    '800': page('REGALI', up(GIFTS.title), ['100', '500', '600', '700'], paras(GIFTS.text)),
     '888': page('SOTTOTITOLI', 'SOTTOTITOLI', ['100', '101', '600', '700'], [[
       ...lines(['Il giorno del matrimonio qui', 'scorreranno le promesse,', 'sottotitolate in diretta (o quasi).']), E(),
       ...lines(['Bravi: l\'avete trovata.'], M),

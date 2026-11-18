@@ -25,7 +25,7 @@
 <body>
 <main id="facts"><p>Caricamento…</p></main>
 <script type="module">
-  import { WEDDING, PROGRAMME, TRAVEL, WEATHER, DRESS, RSVP, FAQ } from './src/content.js';
+  import { WEDDING, PROGRAMME, TRAVEL, WEATHER, DRESS, RSVP, FAQ, GIFTS } from './src/content.js';
   const e = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]));
   const dl = (rows) => `<dl>${rows.map(([a, b]) => `<dt>${e(a)}</dt><dd>${e(b)}</dd>`).join('')}</dl>`;
   const ps = (list) => list.map((t) => `<p>${e(t)}</p>`).join('');
@@ -41,6 +41,7 @@
     ${sec(WEATHER)}
     ${sec(DRESS)}
     <h2>${e(RSVP.title)}</h2><p>Potete confermarci la vostra presenza, entro il ${e(WEDDING.rsvpBy)}, con la macchina da scrivere nello <a href="index.html?focus=typewriter">studio</a>.</p>
+    ${sec(GIFTS)}
     <h2>Domande frequenti</h2>${faq.map(([q, a]) => `<p><b>${e(q)}</b></p>${ps(a)}`).join('')}`;
 </script>
 </body>
