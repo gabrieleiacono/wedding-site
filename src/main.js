@@ -8,7 +8,7 @@ import { buildBike } from './bike.js';
 import { buildRacket } from './racket.js';
 import { buildBass } from './bass.js';
 import { buildBacheca, BOARD } from './bacheca.js';
-import { buildPrints, buildBin, buildRug } from './keepsakes.js';
+import { buildPrints, buildPoster, buildBin, buildRug } from './keepsakes.js';
 import { buildLeggimi } from './leggimi.js';
 import { ShelfView } from './shelfview.js';
 import { Typewriter } from './typewriter.js';
@@ -83,6 +83,7 @@ const bass = buildBass(room); // the bass on its hanger, in the corner of the de
 bass.hooks.pluck = (i) => sound.pluck(i);
 const board = buildBacheca(room); // the cork board with their photos, between the bass and the window
 const prints = buildPrints(room); // two prints, right of the window: Valle Camonica and Modica
+const poster = buildPoster(room); // the Moomin poster, above the TV
 buildBin(room); // the wicker bin of drafts, right of the desk (just to look at)
 buildRug(room); // the frazzata on the floor
 const shelfView = new ShelfView({ shelf: shelf.shelf, sound });
@@ -350,6 +351,8 @@ const BOARD_LEAN = () => frameView({ pts: around(board.center, BOARD.w / 2 + 0.0
 const boardHelp = () => { $('#help').hidden = false; $('#help').textContent = `Tocca una foto per sfogliarle tutte (${board.count})`; };
 // The two prints, straight on.
 const PRINTS_HOT = { id: 'prints', wall: 0, lean: () => frameView({ pts: around(prints.center, 0.4, 0.25, 0.02), dir: new THREE.Vector3(0, -0.04, -1).normalize(), fov: portrait() ? 50 : 40 }) };
+// The Moomin poster above the TV, straight on.
+const POSTER_HOT = { id: 'poster', wall: 1, lean: () => frameView({ pts: around(poster.center, 0.02, poster.size.h / 2 + 0.02, poster.size.w / 2 + 0.02), dir: new THREE.Vector3(1, 0.04, 0).normalize(), fov: portrait() ? 50 : 40 }) };
 
 // --- hotspots ----------------------------------------------------------------------------
 const HOT = [
@@ -480,6 +483,8 @@ function clickAt(x, y) {
   if (hitRoom && board.isBoard(hitRoom.object)) { activate(HOT.find((h) => h.id === 'board')); return; }
   // a tap on the prints takes you up to them
   if (hitRoom && prints.isPrints(hitRoom.object)) { activate(PRINTS_HOT); return; }
+  // a tap on the Moomin poster takes you up to it
+  if (hitRoom && poster.isPoster(hitRoom.object)) { activate(POSTER_HOT); return; }
   // a tap on the bike (the pedals above all) pushes the pedals back, freewheeling; too many, too fast, and the chain comes off
   if (hitRoom && bike.isBike(hitRoom.object)) { bike.tap(); return; }
   // a tap on the tennis racket sets it rocking on its nail
@@ -889,4 +894,4 @@ if (params.has('shelf')) setTimeout(() => {
   if (params.has('book')) setTimeout(() => shelfView.pull(shelfView.row.books[+params.get('book')] ?? shelfView.row.books[0]), 900);
 }, 300);
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
-window.__scene = { scene, camera, renderer, dens, rig, teletext, tv, typewriter, view, HOT, activate, shelfView, bike, racket, bass, BASS_HOT, PRINTS_HOT, board, openPhotos, sound };
+window.__scene = { scene, camera, renderer, dens, rig, teletext, tv, typewriter, view, HOT, activate, shelfView, bike, racket, bass, BASS_HOT, PRINTS_HOT, POSTER_HOT, board, openPhotos, sound };

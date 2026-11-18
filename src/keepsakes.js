@@ -48,6 +48,28 @@ export function buildPrints(room) {
   return { group: g, center: g.position.clone().add(new THREE.Vector3(0, 0, 0.015)), isPrints: inside(g) };
 }
 
+// --- Il poster dei Mumin ------------------------------------------------------------------------------------
+// Their Moomin print above the TV: Moomintroll and Snorkmaiden hugging among the daisies, a 50 × 70 poster
+// (the picture as given, cream border and all) in a thin light-oak frame like the window's and the door's.
+// Hung high enough that the TV's rabbit ears stay below it, centred on the set. A tap takes you up to it.
+const POSTER_URL = 'assets/posters/moomin.jpg'; // 1120 × 1600, from the 2000 × 2857 original
+export function buildPoster(room) {
+  const g = new THREE.Group(); room.add(g);
+  const w = 0.5, h = w * 2857 / 2000, f = 0.022;
+  const mat = makeInk({ color: '#F2EBE3', wash: 1, hatch: 0.12, lift: 0 }); // the cream border until the picture arrives
+  new THREE.TextureLoader().load(POSTER_URL, (t) => {
+    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+    mat.map = t; mat.color.set('#ffffff'); mat.needsUpdate = true;
+  });
+  const oak = paint('#C99A5E', { wash: 0.88, hatch: 0.35 }); // light oak, plain: at this size a grain only reads as dark lines
+  const fr = framed(w, h, mat, oak, f, 0.026); g.add(fr);
+  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.025, depthWrite: false }));
+  glass.position.z = 0.02; glass.raycast = () => {}; g.add(glass);
+  g.rotation.y = -Math.PI / 2; // facing the room from the east wall
+  g.position.set(ROOM.hx - 0.004, 1.84 + f + h / 2, -0.55); // over the TV (z −0.55), its bottom edge at 1.84 m
+  return { group: g, center: g.position.clone().add(new THREE.Vector3(-0.015, 0, 0)), size: { w: w + 2 * f, h: h + 2 * f }, isPoster: inside(g) };
+}
+
 // --- 6 · Il cestino delle bozze ---------------------------------------------------------------------------
 /** A ball of crumpled paper: an icosphere pushed in and out. */
 function crumple(rad, seed) {
