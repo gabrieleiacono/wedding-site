@@ -9,7 +9,6 @@ export const STEPS = [
   { id: 'name', q: 'COME TI CHIAMI?', label: 'NOME' },
   { id: 'coming', q: 'CI SARAI? (S/N)', label: 'CI SARÀ', yn: true },
   { id: 'allergies', q: 'ALLERGIE?', label: 'ALLERGIE', onlyIfComing: true },
-  { id: 'word', q: 'UNA PAROLA BUFFA?', label: 'PAROLA', onlyIfComing: true },
   { id: 'message', q: 'UN MESSAGGIO?', label: 'MSG' },
 ];
 const PAPER_W = 0.21, PAPER_H = 0.297, LINE_H = 0.0135, MARGIN_TOP = 0.032, COLS = 27;
@@ -140,7 +139,7 @@ export class Typewriter {
     const a = this.answers;
     this.record = {
       name: a.name, coming: !!a.coming, count: a.coming ? 1 : 0, // one answer, one guest
-      allergies: a.allergies || '', word: a.word || '', message: a.message || '', at: new Date().toISOString(),
+      allergies: a.allergies || '', message: a.message || '', at: new Date().toISOString(),
     };
     this.lines.push({ t: '', c: '#2A2420' });
     this.lines.push({ t: a.coming ? 'A PRESTO!' : 'CI MANCHERAI.', c: '#B6402A', prefix: '' });
