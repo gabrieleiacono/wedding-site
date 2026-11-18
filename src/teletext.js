@@ -5,6 +5,7 @@
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { WEDDING, PROGRAMME, TRAVEL, WEATHER, DRESS, RSVP, GUESTBOOK, FAQ } from './content.js';
 import { Tennis } from './tennis.js';
+import { romeTime } from './rometime.js';
 
 const COLS = 40, ROWS = 25, CW = 20, CH = 24, RES = 2;
 // Text is IBM Plex Mono at medium weight (bold clogs up once it is stretched to the cell), one column in from
@@ -174,9 +175,9 @@ export class Teletext {
     const all = this.pages(), cur = all[this.page] || all['100'];
     const lay = this.big ? LAYOUT.big : LAYOUT.normal;
     ctx.fillStyle = '#000'; ctx.fillRect(0, 0, COLS * CW, ROWS * CH);
-    const d = new Date();
+    const d = romeTime(); // the header clock keeps Rome time, like the wall clock
     const pad = (n) => String(n).padStart(2, '0');
-    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const time = `${pad(d.h)}:${pad(d.m)}:${pad(d.s)}`;
     const num = this.buf ? (this.buf + '___').slice(0, 3) : (this.page === 'none' ? this.missing : this.page);
     this.text(MARGIN, 0, `P${num} MATRIMONIO  SAB ${WEDDING.dateShort}`.padEnd(COLS - 2 * MARGIN - time.length) + time, W);
     const n = cur.subs.length, si = this.subIndex(cur), more = n > 1 && !cur.auto;

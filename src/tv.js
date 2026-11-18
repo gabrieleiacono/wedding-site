@@ -6,6 +6,7 @@ import { M, box, cyl, slab, ROOM, roundedShape, extrude } from './room.js';
 import { merge } from './geo.js';
 import { buildConsole } from './console.js';
 import { buildPricklyPear } from './ficodindia.js';
+import { romeTime } from './rometime.js';
 
 export function buildTV(room, teletext) {
   const g = new THREE.Group(); room.add(g);
@@ -148,9 +149,10 @@ export function buildTV(room, teletext) {
     tick(now) {
       powerFrame(now);
       powerBtn.position.x = -0.258 + (pw.pressed && now - pw.pressed < 160 ? 0.005 : 0);
-      const d = new Date();
-      const h = d.getHours() % 12 + d.getMinutes() / 60, m = d.getMinutes() + d.getSeconds() / 60;
-      hourHand.rotation.x = -h / 12 * Math.PI * 2; minHand.rotation.x = -m / 60 * Math.PI * 2;
+      const d = romeTime(); // the wall clock keeps Rome time
+      const h = d.h % 12 + d.m / 60, m = d.m + d.s / 60;
+      // +x turns the hands clockwise as seen from the room (the face looks along −x)
+      hourHand.rotation.x = h / 12 * Math.PI * 2; minHand.rotation.x = m / 60 * Math.PI * 2;
       const on = Math.floor(now / 600) % 2;
       if (on === this.vcrOn) return; // the VCR's 12:00 only changes when it blinks
       this.vcrOn = on;
