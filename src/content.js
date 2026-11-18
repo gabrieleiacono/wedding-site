@@ -68,12 +68,19 @@ export const FAQ = [
   ['Chi è che si sposa?', ['Paola e Gabriele!']],
   ['C’è un dress code?', ['Vai a pagina 400 del televideo']],
   ['C’è parcheggio?', ['Sì, troverete tutto il parcheggio di cui avete bisogno.']],
-  ['Lista nozze e regali', ['La casa in cui viviamo è piccola e non ci manca nulla, il miglior regalo che possiate farci è starci accanto in questo giorno importante. Vogliamo che ciascuno si senta libero di contribuire solo se e come può noi non ci faremo attenzione, ogni donazione servirà a finanziare la nostra spedizione di ricerca della Valle dei Mumin (Mumindalen).']],
   ['Se ho allergie, intolleranze o seguo un regime alimentare non convenzionale', [
     'Nessun problema! Segnalatecelo quanto prima in modo da organizzare al meglio il nostro banchetto, senza pensieri e preoccupazioni.',
     'In ogni caso, segnalatelo anche ai camerieri quel giorno, affinché non ci siano incidenti.',
   ]],
 ];
+
+// 800: Lista nozze e regali
+export const GIFTS = {
+  title: 'Lista nozze e regali',
+  text: [
+    'La casa in cui viviamo è piccola e non ci manca nulla, il miglior regalo che possiate farci è starci accanto in questo giorno importante. Vogliamo che ciascuno si senta libero di contribuire solo se e come può noi non ci faremo attenzione, ogni donazione servirà a finanziare la nostra spedizione di ricerca della Valle dei Mumin (Mumindalen).',
+  ],
+};
 
 // Five short stories (≤ 250 words each), once the notebooks on the desk. The notebooks made room for
 // LEGGIMI and nothing in the room opens these now (overlays.notebooks() still can), kept for another home.
