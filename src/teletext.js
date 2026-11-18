@@ -55,6 +55,13 @@ export function buildPages(guests = [], missing = '', layout = LAYOUT.normal) {
   const para = (text, c = W, width = WD) => wrap(text, width).map((l) => L(l, c));
   const paras = (list, c = W) => list.map((t) => para(t, c));
   const lines = (list, c = W) => list.flatMap((t) => para(t, c));
+  // a line of the gift details: whole if it fits, otherwise split after its label ("IBAN", "Per spedire:")
+  const fit = (t) => {
+    if (t.length <= WD) return [t];
+    const cut = t.indexOf(': ') + 1 || t.indexOf(' ');
+    return cut > 0 ? [t.slice(0, cut), ...wrap(t.slice(cut + 1), WD).filter(Boolean)] : [t];
+  };
+  const detail = (block) => block.flatMap(fit).map((t) => L(t, C));
   const page = (title, heading, fast, blocks, extra = {}) => ({ title, heading, fast, subs: paginate(blocks, layout.body), ...extra });
   const yes = guests.filter((g) => g.coming);
   const msgs = guests.filter((g) => g.message && g.message.trim());
@@ -104,7 +111,7 @@ export function buildPages(guests = [], missing = '', layout = LAYOUT.normal) {
     '500': page('RSVP', up(RSVP.title), ['100', '600', '101', '700'], paras(RSVP.text)),
     '600': { title: 'OSPITI', heading: up(GUESTBOOK.title), fast: ['100', '500', '101', '700'], auto: true, subs: g600 },
     '700': page('FAQ', 'FAQ', ['100', '200', '400', '800'], FAQ.map(([q, a]) => [...para(q, C), ...a.flatMap((t) => para(t))])),
-    '800': page('REGALI', up(GIFTS.title), ['100', '500', '600', '700'], paras(GIFTS.text)),
+    '800': page('REGALI', up(GIFTS.title), ['100', '500', '600', '700'], [...paras(GIFTS.text), ...GIFTS.details.map(detail)]),
     '888': page('SOTTOTITOLI', 'SOTTOTITOLI', ['100', '101', '600', '700'], [[
       ...lines(['Il giorno del matrimonio qui', 'scorreranno le promesse,', 'sottotitolate in diretta (o quasi).']), E(),
       ...lines(['Bravi: l\'avete trovata.'], M),
@@ -194,7 +201,9 @@ export class Teletext {
     let row = 0;
     for (const r of cur.subs[si]) {
       if (row >= lay.rows) break;
-      this.text(MARGIN, row, r.t, r.c, cell);
+      // a word wider than the body (the IBAN, in SIZE's 26 columns) is drawn a little narrower to fit
+      const over = r.t.length > lay.width;
+      this.text(MARGIN, row, r.t, r.c, over ? { ...cell, x: MARGIN * lay.cw, cw: (lay.cw * lay.width) / r.t.length } : cell);
       if (r.n) this.text(MARGIN + r.t.length, row, r.n, Y, cell);
       row++;
     }

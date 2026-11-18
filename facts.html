@@ -19,6 +19,7 @@
   dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; }
   dt { font-weight: 600; } dd { margin: 0; }
   .lead { color: var(--dim); margin: 0; }
+  .gift { font: 500 16px/1.6 'IBM Plex Mono', monospace; overflow-wrap: anywhere; }
   a { color: var(--accent); }
 </style>
 </head>
@@ -41,7 +42,7 @@
     ${sec(WEATHER)}
     ${sec(DRESS)}
     <h2>${e(RSVP.title)}</h2><p>Potete confermarci la vostra presenza, entro il ${e(WEDDING.rsvpBy)}, con la macchina da scrivere nello <a href="index.html?focus=typewriter">studio</a>.</p>
-    ${sec(GIFTS)}
+    ${sec(GIFTS)}${GIFTS.details.map((b) => `<p class="gift">${b.map(e).join('<br>')}</p>`).join('')}
     <h2>Domande frequenti</h2>${faq.map(([q, a]) => `<p><b>${e(q)}</b></p>${ps(a)}`).join('')}`;
 </script>
 </body>
