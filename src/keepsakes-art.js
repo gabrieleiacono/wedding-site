@@ -71,9 +71,8 @@ export function rockRubbing() {
   }, 0.5);
   // rubbing edge: uneven graphite margin
   g.strokeStyle = '#F4EEE0'; g.lineWidth = 18; for (let i = 0; i < 200; i++) { const t = r(); const side = (r() * 4) | 0; const x = side < 2 ? x0 + t * w : (side === 2 ? x0 : x0 + w), y = side >= 2 ? y0 + t * h : (side === 0 ? y0 : y0 + h); g.beginPath(); g.arc(x, y, 4 + r() * 10, 0, Math.PI * 2); g.fillStyle = '#F4EEE0'; g.fill(); }
-  // caption in pencil
-  text(g, 'Calco · incisioni rupestri, Valle Camonica', W / 2, H - 100, 'italic 26px Georgia, serif', '#555049');
-  text(g, 'Darfo', W / 2, H - 62, '600 30px Caveat, cursive', '#555049');
+  // caption in pencil, alone in the bottom margin
+  text(g, 'Calco · incisioni rupestri, Valle Camonica', W / 2, H - 80, 'italic 26px Georgia, serif', '#555049');
   return c;
 }
 
@@ -124,8 +123,7 @@ export function modicaEtching() {
   // swallows
   for (let i = 0; i < 5; i++) { const sx = x0 + 60 + r() * (w - 120), sy = y0 + 40 + r() * 120; pen(g, 1.6, S); g.beginPath(); g.moveTo(sx - 9, sy - 3); g.quadraticCurveTo(sx - 3, sy - 4, sx, sy + 2); g.quadraticCurveTo(sx + 3, sy - 4, sx + 9, sy - 3); g.stroke(); }
   g.restore();
-  text(g, 'Modica · San Giorgio, dalla scalinata', W / 2, H - 100, 'italic 26px Georgia, serif', '#555049');
-  text(g, 'acquaforte, 2/30', W / 2, H - 62, '600 30px Caveat, cursive', '#555049');
+  text(g, 'Modica · San Giorgio, dalla scalinata', W / 2, H - 80, 'italic 26px Georgia, serif', '#555049');
   return c;
 }
 
