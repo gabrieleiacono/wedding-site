@@ -1,8 +1,9 @@
 // Close-ups that open on top of the room: the photo viewer, notebooks (unused for now), the LEGGIMI book, the RSVP reply card,
-// the wall calendar and the closing credits (no longer reachable from the room).
+// the wall calendar, page 37 of the Pagine Gialle and the closing credits (no longer reachable from the room).
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { STORIES, LEGGIMI, CREDITS, WEDDING } from './content.js';
 import { PHOTOS } from './photos.js';
+import { drawPage, FONTS, VENUE } from './paginegialle-art.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -18,7 +19,7 @@ export class Overlays {
   show(html, cls = '') {
     this.cleanup?.(); this.cleanup = null;
     this.card.className = cls; this.card.innerHTML = html; this.el.hidden = false;
-    this.el.classList.toggle('viewing', cls === 'viewer');
+    this.el.classList.toggle('viewing', cls === 'viewer' || cls === 'pg');
     $('#overlay-close').focus();
   }
   close() { if (this.el.hidden) return; this.cleanup?.(); this.cleanup = null; this.el.hidden = true; this.el.classList.remove('viewing'); this.card.innerHTML = ''; this.onClose(); }
@@ -89,6 +90,63 @@ export class Overlays {
   replyCard(r, n) {
     const row = (k, v) => v ? `<div>${k}: ${esc(v)}</div>` : '';
     this.show(`<div class="sheet card"><div class="num">RISPOSTA N. ${String(n).padStart(3, '0')}</div><div style="margin-top:8px">${esc(r.name).toUpperCase()}</div>${row('CI SARÀ', r.coming ? 'SÌ' : 'NO')}${r.coming ? row('ALLERGIE', r.allergies || 'nessuna') + row('PAROLA BUFFA', r.word) : ''}${row('MSG', r.message)}<hr><div class="thanks">${r.coming ? 'grazie! a presto' : 'grazie lo stesso!'}</div><div class="mono" style="font-size:12px;color:#6A5A4A">Il tuo nome è sul televideo, pagina 600.</div></div>`);
+  }
+
+  /** Page 37 of the Pagine Gialle, Agriturismo: shown at a size you can read, opened round Cascina Carretto's
+   *  entry; drag it to see the rest of the page. The ringed entry, the big ad and the post-it all open the
+   *  venue in Google Maps. */
+  pagineGialle() {
+    const PW = 2100, PH = 2800;
+    const link = (cls, label, inner = '') => `<a class="${cls}" href="${esc(VENUE.maps)}" target="_blank" rel="noopener" aria-label="${esc(label)}">${inner}</a>`;
+    this.show(`<div class="pg-stage"><div class="pg-page"><canvas width="${PW}" height="${PH}" aria-hidden="true"></canvas>` +
+      link('pg-hit pg-entry', `${VENUE.name}, ${VENUE.street}, ${VENUE.town}: apri in Google Maps`) +
+      link('pg-hit pg-ad', `${VENUE.name}: apri in Google Maps`) +
+      link('pg-note hand', 'Come arrivarci: apri in Google Maps', 'Come arrivarci →<small>Apri in Google Maps</small>') +
+      `</div></div><div class="pg-cap pill"><span>${esc(VENUE.name)} · ${esc(VENUE.street)} · ${esc(VENUE.town)}</span> ${link('pg-maps', 'Apri in Google Maps', 'Google Maps ↗')}</div>`, 'pg');
+    const c = this.card, stage = c.querySelector('.pg-stage'), pageEl = c.querySelector('.pg-page'), cv = c.querySelector('canvas');
+    let at = null, scale = 1, ox = 0, oy = 0;
+    const place = (el, r, pad = 0) => Object.assign(el.style, { left: `${(r.x - pad) / PW * 100}%`, top: `${(r.y - pad) / PH * 100}%`, width: `${(r.w + 2 * pad) / PW * 100}%`, height: `${(r.h + 2 * pad) / PH * 100}%` });
+    const clamp = () => {
+      const sw = stage.clientWidth, sh = stage.clientHeight, w = PW * scale, h = PH * scale;
+      ox = w <= sw ? (sw - w) / 2 : Math.min(0, Math.max(sw - w, ox));
+      oy = h <= sh ? (sh - h) / 2 : Math.min(0, Math.max(sh - h, oy));
+      pageEl.style.transform = `translate(${ox}px, ${oy}px)`;
+    };
+    const layout = () => {
+      if (!at) return;
+      const sw = stage.clientWidth, sh = stage.clientHeight;
+      // the entry's column and a half wide on a phone; on a wide screen most of the page, its text about 13 px
+      scale = sw < 600 ? sw / (at.entry.w * 2.1) : Math.max(sh / PH, Math.min(sw / PW, sh * 1.45 / PH));
+      pageEl.style.width = `${PW * scale}px`; pageEl.style.height = `${PH * scale}px`;
+      ox = sw * (sw < 600 ? 0.5 : 0.42) - (at.entry.x + at.entry.w / 2) * scale;
+      oy = sh * 0.38 - (at.entry.y + at.entry.h / 2) * scale;
+      const note = c.querySelector('.pg-note');
+      note.style.left = `${(at.entry.x + at.entry.w * (sw < 600 ? 0.55 : 1.04)) / PW * 100}%`;
+      note.style.top = `${(at.entry.y + at.entry.h * (sw < 600 ? 1.55 : -0.15)) / PH * 100}%`;
+      clamp();
+    };
+    const draw = () => { const x = cv.getContext('2d'); x.setTransform(1, 0, 0, 1, 0, 0); at = drawPage(x, PW, PH); place(c.querySelector('.pg-entry'), at.entry, 34); place(c.querySelector('.pg-ad'), at.ad); layout(); };
+    draw();
+    Promise.all(FONTS.map((f) => document.fonts.load(f, 'PAGINE'))).then(() => { if (c.contains(cv)) draw(); }, () => {});
+    // drag the page about; a drag that moved doesn't count as a tap on a link
+    let sx = null, sy = 0, bx = 0, by = 0, moved = false;
+    stage.addEventListener('pointerdown', (e) => { sx = e.clientX; sy = e.clientY; bx = ox; by = oy; moved = false; });
+    stage.addEventListener('pointermove', (e) => {
+      if (sx === null) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      if (!moved && Math.hypot(dx, dy) > 6) { moved = true; stage.setPointerCapture(e.pointerId); stage.classList.add('dragging'); }
+      if (moved) { ox = bx + dx; oy = by + dy; clamp(); }
+    });
+    const end = (e) => {
+      if (sx === null) return;
+      sx = null; stage.classList.remove('dragging');
+      if (!moved && e.type === 'pointerup' && (e.target === stage)) this.close(); // a tap beside the page closes it
+    };
+    stage.addEventListener('pointerup', end); stage.addEventListener('pointercancel', end);
+    stage.addEventListener('click', (e) => { if (moved && e.target.closest('a')) { e.preventDefault(); moved = false; } }, true);
+    stage.addEventListener('wheel', (e) => { e.preventDefault(); ox -= e.deltaX; oy -= e.deltaY; clamp(); }, { passive: false });
+    window.addEventListener('resize', layout);
+    this.cleanup = () => window.removeEventListener('resize', layout);
   }
 
   calendar() {

@@ -3,6 +3,7 @@
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
 import { buildSirio } from './phone.js';
+import { buildPagineGialle } from './paginegialle.js';
 import { buildLamp } from './lamp.js';
 
 export const ROOM = { w: 4.2, d: 3.6, h: 2.9, hx: 2.1, hz: 1.8 };
@@ -293,14 +294,18 @@ function buildWestWall(room, anchors) {
   anchors.calendar = new THREE.Vector3(x + 0.05, 1.42, -0.42);
   anchors.calendarGroup = cal;
 
-  // small table with the Sirio-style phone and the address book
-  const tz = -1.15;
-  box(0.4, 0.025, 0.36, M.walnut, x + 0.24, 0.7, tz, g);
-  for (const [ox, oz] of [[0.04, 0.04], [0.36, 0.04], [0.04, 0.32], [0.36, 0.32]]) box(0.025, 0.69, 0.025, M.walnutY, x + 0.04 + ox - 0.02, 0.345, tz - 0.18 + oz - 0.02 + 0.02, g);
+  // small table (44 × 56 cm) with the Sirio-style phone and the Pagine Gialle
+  const tz = -1.2, TW = 0.44, TD = 0.56;
+  box(TW, 0.025, TD, M.walnut, x + 0.02 + TW / 2, 0.7, tz, g);
+  for (const ox of [0.04, TW]) for (const oz of [-TD / 2 + 0.03, TD / 2 - 0.03]) box(0.025, 0.69, 0.025, M.walnutY, x + ox, 0.345, tz + oz, g);
   const { group: phone, handset } = buildSirio();
-  phone.position.set(x + 0.2, 0.7125, tz + 0.02); phone.rotation.y = Math.PI / 2 + 0.25;
+  phone.position.set(x + 0.22, 0.7125, tz + 0.15); phone.rotation.y = Math.PI / 2 + 0.2;
   g.add(phone);
-  anchors.phone = new THREE.Vector3(x + 0.22, 0.85, tz + 0.03);
+  anchors.phone = new THREE.Vector3(x + 0.24, 0.85, tz + 0.16);
   anchors.phoneHandset = handset;
-  const book = box(0.15, 0.025, 0.2, M.red, x + 0.3, 0.725, tz - 0.12, g); book.rotation.y = 0.3;
+  const pg = buildPagineGialle();
+  pg.group.position.set(x + 0.25, 0.7125, tz - 0.12); pg.group.rotation.y = -0.12;
+  g.add(pg.group);
+  anchors.pagine = new THREE.Vector3(x + 0.25, 0.78, tz - 0.12);
+  anchors.pagineGialle = pg;
 }

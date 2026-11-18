@@ -337,6 +337,9 @@ const WINDOW_LEAN = () => {
 };
 const CAL_LEAN = () => frameView({ pts: around(anchors.calendar, 0.01, 0.26, 0.2), dir: new THREE.Vector3(-1, -0.04, 0), fov: 45 });
 // LEGGIMI: over the desk, the book propped up with its cover to you
+// Pagine Gialle: from above and from the room, the open page and the cover standing up behind it
+const pagine = anchors.pagineGialle;
+const PG_LEAN = () => frameView({ pts: around(anchors.pagine.clone().add(new THREE.Vector3(0, 0.03, 0.03)), 0.15, 0.06, 0.17), dir: elev(58, Math.PI / 2 - 0.12), fov: portrait() ? 50 : 40, fill: 0.82 });
 const LEGGIMI_LEAN = () => frameView({ pts: around(leggimi.at.clone().add(new THREE.Vector3(0, 0.06, 0)), 0.13, 0.09, 0.15), dir: elev(45, -0.25), fov: 45 });
 
 // The bass: all of it, hanging, from a little to the right, so the strings catch the light. Taps pluck it.
@@ -362,6 +365,8 @@ const HOT = [
   { n: 7, id: 'window', title: 'Finestra', sub: 'Alza la tapparella e affacciati', at: new THREE.Vector3(WINDOW.x1 - 0.3, 1.3, -ROOM.hz), wall: 0, lean: WINDOW_LEAN, peek: true, go: lookOut },
   { n: 8, id: 'calendar', title: 'Calendario', sub: 'Quanto manca?', at: anchors.calendar, wall: 3,
     lean: CAL_LEAN, go: () => overlays.calendar() },
+  { n: 'PG', id: 'pagine', title: 'Pagine Gialle', sub: 'Come arrivare alla cascina', at: anchors.pagine, wall: 3,
+    lean: PG_LEAN, go: () => { pagine.setOpen(true); setTimeout(() => { if (rig.focus?.id === 'pagine' && !overlays.open) overlays.pagineGialle(); }, 750); } },
   { n: '☎', id: 'phone', title: 'Telefono', sub: 'Domande frequenti', at: anchors.phone, wall: 3, lean: TV_LEAN, go: () => { teletext.go('700'); showRemote(true); } },
   { n: 'Aa', id: 'shelf', title: 'Scaffali', sub: 'Avvicinati e leggi i titoli', wall: 2, lean: shelfView.lean, go: () => { shelfView.enter(shelfAsk.ri, shelfAsk.x); shelfAsk = { ri: 0, x: null }; },
     at: (() => { const R = shelf.shelf.rows[3]; return shelf.shelf.group.localToWorld(new THREE.Vector3(0.15, R.y + 0.12, shelf.shelf.spineZ)); })() },
@@ -415,6 +420,7 @@ function unfocus(quick) {
   if (h.id === 'typewriter') stopTyping();
   if (['tv', 'remote', 'console', 'phone'].includes(h.id)) showRemote(false);
   if (h.id === 'leggimi') pullBook(false);
+  if (h.id === 'pagine') pagine.setOpen(false);
   if (h.id === 'shelf') shelfView.leave();
 }
 $('#back').addEventListener('click', () => unfocus());
@@ -468,6 +474,8 @@ function clickAt(x, y) {
   if (rig.focus) return;
   // a tap on the bass takes you up to it, and plucks a string on the way
   if (hitRoom && bass.isBass(hitRoom.object)) { activate(BASS_HOT); bass.pluck(hitRoom.point); return; }
+  // a tap on the Pagine Gialle opens it on Cascina Carretto's page
+  if (hitRoom && pagine.isBook(hitRoom.object)) { activate(HOT.find((h) => h.id === 'pagine')); return; }
   // a tap on the cork board takes you up to it
   if (hitRoom && board.isBoard(hitRoom.object)) { activate(HOT.find((h) => h.id === 'board')); return; }
   // a tap on the prints takes you up to them
@@ -836,6 +844,7 @@ function drawFrame(now) {
   shutter += (shutterTarget - shutter) * Math.min(1, dt * 2.2); layoutShutter();
   bookOut += (bookTarget - bookOut) * Math.min(1, dt * 6);
   leggimi.tick(now, bookOut);
+  pagine.tick(dt);
   if (Math.floor(now / 60000) !== drawFrame.min) { drawFrame.min = Math.floor(now / 60000); cal.draw(); }
 
   post.mat.uniforms.uTime.value = now / 1000;
