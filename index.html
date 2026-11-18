@@ -23,7 +23,7 @@
   <div id="hotspots"></div>
   <div id="hint" class="pill">Trascina per girarti · clicca sugli oggetti</div>
   <div id="corner">
-    <a id="facts" class="pill btn" href="facts.html">Solo i fatti</a>
+    <a id="facts" class="pill btn" href="facts.html">Tutte le info (se sei di fretta)</a>
     <button id="audio" class="pill btn round" aria-label="Audio acceso" aria-pressed="true">
       <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path class="wave" d="M15.5 8.5a5 5 0 0 1 0 7"></path><path class="wave" d="M19 5a10 10 0 0 1 0 14"></path></svg>
     </button>
@@ -105,7 +105,7 @@
       var l = document.getElementById('loading');
       if (!l || l.classList.contains('gone')) return null;
       l.innerHTML = '<div class="boot-msg" role="alert"><p class="lead"></p><p class="advice"></p>' +
-        '<p class="acts"><button type="button" class="pill btn" data-reload>Riprova</button> <a class="pill btn" href="facts.html">Solo i fatti</a></p><p class="why"></p></div>';
+        '<p class="acts"><button type="button" class="pill btn" data-reload>Riprova</button> <a class="pill btn" href="facts.html">Tutte le info (se sei di fretta)</a></p><p class="why"></p></div>';
       l.querySelector('.lead').textContent = lead;
       l.querySelector('.advice').textContent = advice;
       l.querySelector('.why').textContent = why || '';
@@ -153,7 +153,7 @@
       var l = document.getElementById('loading');
       if (!l || l.classList.contains('gone')) return;
       var n = document.createElement('div'); n.className = 'boot-msg slow';
-      n.innerHTML = '<p class="advice">Ci sta mettendo un po\'. Se resta ferma qui, riprova.</p><p class="acts"><button type="button" class="pill btn" data-reload>Riprova</button> <a class="pill btn" href="facts.html">Solo i fatti</a></p>';
+      n.innerHTML = '<p class="advice">Ci sta mettendo un po\'. Se resta ferma qui, riprova.</p><p class="acts"><button type="button" class="pill btn" data-reload>Riprova</button> <a class="pill btn" href="facts.html">Tutte le info (se sei di fretta)</a></p>';
       n.querySelector('[data-reload]').onclick = function () { location.reload(); };
       l.appendChild(n);
     }, 25000);

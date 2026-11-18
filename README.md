@@ -17,7 +17,7 @@ Turn around the room; every piece of wedding information lives in an object.
 - **Window**: living landscape (trains on the viaduct, donkeys and foals, rooster, swallows); pull the shutter strap
 - **Lamp**: comes on by itself at the blue hour; click it to turn it on or off.
 - **Calendar**: countdown. **Phone**: FAQ.
-- `facts.html`: "Solo i fatti", a plain text version of everything.
+- `facts.html`: "Tutte le info (se sei di fretta)", a plain text version of everything.
 
 Design: see `knowledge/claude/final-design-scrittoio-con-vista.md` in the project files.
 
