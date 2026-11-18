@@ -80,6 +80,12 @@ export const GIFTS = {
   text: [
     'La casa in cui viviamo è piccola e non ci manca nulla, il miglior regalo che possiate farci è starci accanto in questo giorno importante. Vogliamo che ciascuno si senta libero di contribuire solo se e come può noi non ci faremo attenzione, ogni donazione servirà a finanziare la nostra spedizione di ricerca della Valle dei Mumin (Mumindalen).',
   ],
+  // where to send a gift, as Paola and Gabriele wrote it: groups of lines, one entry per line (the IBAN stays
+  // whole, the televideo never breaks it, and squeezes it a little when it is wider than the screen)
+  details: [
+    ['IBAN IT74Q0760111200001011465331', 'Intestato a Paola Chini'],
+    ['Per spedire: Via Ubertosa, 19', '25047 - Darfo B.T. (BS)'],
+  ],
 };
 
 // Five short stories (≤ 250 words each), once the notebooks on the desk. The notebooks made room for
