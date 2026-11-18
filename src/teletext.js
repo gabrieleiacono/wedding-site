@@ -61,7 +61,13 @@ export function buildPages(guests = [], missing = '', layout = LAYOUT.normal) {
     const cut = t.indexOf(': ') + 1 || t.indexOf(' ');
     return cut > 0 ? [t.slice(0, cut), ...wrap(t.slice(cut + 1), WD).filter(Boolean)] : [t];
   };
-  const detail = (block) => block.flatMap(fit).map((t) => L(t, C));
+  // a line that holds one of GIFTS.copy's values gets its copy key at the end (the line keeps 3 columns for it),
+  // and the block with copy keys ends with a green line that says what they do
+  const detail = (block) => {
+    const rows = block.flatMap(fit).map((t) => ({ ...L(t, C), copy: GIFTS.copy.find((k) => t.includes(k.value)) }));
+    if (rows.some((r) => r.copy)) rows.push({ ...L(''), hint: true });
+    return rows;
+  };
   const page = (title, heading, fast, blocks, extra = {}) => ({ title, heading, fast, subs: paginate(blocks, layout.body), ...extra });
   const yes = guests.filter((g) => g.coming);
   const msgs = guests.filter((g) => g.message && g.message.trim());
@@ -199,12 +205,22 @@ export class Teletext {
     const y0 = 4 * CH, at = (row) => y0 + row * lay.ch;
     const cell = { cw: lay.cw, ch: lay.ch, y0 };
     let row = 0;
+    this.copyHits = [];
+    const flash = this.copied && now < this.copied.until ? this.copied.copy : null;
     for (const r of cur.subs[si]) {
       if (row >= lay.rows) break;
-      // a word wider than the body (the IBAN, in SIZE's 26 columns) is drawn a little narrower to fit
-      const over = r.t.length > lay.width;
-      this.text(MARGIN, row, r.t, r.c, over ? { ...cell, x: MARGIN * lay.cw, cw: (lay.cw * lay.width) / r.t.length } : cell);
+      if (r.hint) { this.copyHint(row, lay, flash); row++; continue; }
+      // a word wider than the body (the IBAN, in SIZE's 26 columns) is drawn a little narrower to fit; a line
+      // with a copy key keeps 3 columns for it
+      const room = lay.width - (r.copy ? 3 : 0), over = r.t.length > room;
+      this.text(MARGIN, row, r.t, r.c, over ? { ...cell, x: MARGIN * lay.cw, cw: (lay.cw * room) / r.t.length } : cell);
       if (r.n) this.text(MARGIN + r.t.length, row, r.n, Y, cell);
+      if (r.copy) {
+        const col = MARGIN + Math.min(r.t.length, room) + 1;
+        this.copyKey(col * lay.cw, at(row), lay, flash === r.copy);
+        // the whole line answers a click, not just the key, with a little room above and below
+        this.copyHits.push({ x0: 0, x1: (col + 2.5) * lay.cw, y0: at(row) - lay.ch * 0.2, y1: at(row) + lay.ch * 1.2, copy: r.copy });
+      }
       row++;
     }
     // a page that goes on: a yellow bar right under the last line says so (on the last subpage, a cyan one says
@@ -234,6 +250,40 @@ export class Teletext {
     this.drawScan();
     this.texture.needsUpdate = true;
   }
+  /** The copy key: a yellow block two cells wide with two overlapping sheets on it, the usual copy sign; green
+   * with a tick for a moment once it has copied. */
+  copyKey(x, y, lay, done) {
+    const ctx = this.ctx, w = lay.cw * 2, h = lay.ch, p = h * 0.08;
+    ctx.save();
+    ctx.fillStyle = done ? G : Y; ctx.fillRect(x, y + p, w, h - 2 * p);
+    ctx.strokeStyle = '#000'; ctx.lineWidth = Math.max(2, h * 0.09); ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+    const s = h * 0.54, cx = x + w / 2, cy = y + h / 2;
+    if (done) {
+      ctx.beginPath(); ctx.moveTo(cx - s * 0.7, cy); ctx.lineTo(cx - s * 0.15, cy + s * 0.5); ctx.lineTo(cx + s * 0.75, cy - s * 0.5); ctx.stroke();
+    } else {
+      const o = s * 0.32;
+      ctx.strokeRect(cx - s / 2 - o / 2, cy - s / 2 - o / 2, s, s); // the sheet behind
+      ctx.fillStyle = Y; ctx.fillRect(cx - s / 2 + o / 2, cy - s / 2 + o / 2, s, s); // the one in front hides it
+      ctx.strokeRect(cx - s / 2 + o / 2, cy - s / 2 + o / 2, s, s);
+    }
+    ctx.restore();
+  }
+  /** The green line under the copy keys: what they do, or for a moment what has just been copied. */
+  copyHint(row, lay, flash) {
+    const cell = { cw: lay.cw, ch: lay.ch, y0: 4 * CH };
+    if (flash) { this.text(MARGIN, row, `${flash.label} copiato!`, G, cell); return; }
+    const verb = this.touch ? 'Tocca' : 'Clicca';
+    this.text(MARGIN, row, verb, G, cell);
+    this.copyKey((MARGIN + verb.length + 1) * lay.cw, 4 * CH + row * lay.ch, lay, false);
+    this.text(MARGIN + verb.length + 4, row, 'per copiare', G, cell);
+  }
+  /** What a click at (x, y) of the 800×600 layout would copy, if it falls on a line with a copy key. */
+  copyAt(x, y) {
+    if (this.av || this.buf) return null;
+    return this.copyHits?.find((h) => x >= h.x0 && x <= h.x1 && y >= h.y0 && y <= h.y1)?.copy ?? null;
+  }
+  /** Shows for a moment that `copy` has gone to the clipboard. */
+  showCopied(copy) { this.copied = { copy, until: performance.now() + 2500 }; this.dirty = true; }
   /** Text in the character grid: `col`, `row` of a grid with cells cw × ch whose first row is at y0 (by default
    * the 40×25 screen). dh draws it double height. x, y place it in pixels instead. */
   text(col, row, s, color, { dh = false, cw = CW, ch = CH, y0 = 0, x, y } = {}) {

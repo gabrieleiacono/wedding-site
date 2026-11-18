@@ -213,6 +213,15 @@ canvas.addEventListener('pointerdown', (e) => {
 });
 canvas.addEventListener('pointermove', (e) => {
   if (shelfView.active) shelfView.pointerMove(e);
+  // in front of the TV, the pointer turns into a hand over the teletext's copy keys
+  if (!down && e.pointerType === 'mouse') {
+    let over = false;
+    if (rig.focus?.lean === TV_LEAN) {
+      const ray = new THREE.Raycaster(); ray.setFromCamera(new THREE.Vector2((e.clientX / innerWidth) * 2 - 1, -(e.clientY / innerHeight) * 2 + 1), camera);
+      over = !!tvCopyAt(ray);
+    }
+    canvas.classList.toggle('copy-hover', over);
+  }
   if (!down) return;
   // deltas from the pointer's own position (movementX is 0 for touch in some browsers)
   const dx = e.clientX - down.lx, dy = e.clientY - down.ly; down.lx = e.clientX; down.ly = e.clientY;
@@ -411,6 +420,21 @@ function unfocus(quick) {
 $('#back').addEventListener('click', () => unfocus());
 overlays.onClose = () => { if (rig.focus?.id === 'board') boardHelp(); else if (!shelfView.active) unfocus(); };
 
+// the teletext copy key under a ray, if any: the screen is a flat plane showing the 800×600 page whole
+function tvCopyAt(ray) {
+  const hit = ray.intersectObject(tv.screen)[0];
+  return hit?.uv ? teletext.copyAt(hit.uv.x * 800, (1 - hit.uv.y) * 600) : null;
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch {
+    // no async clipboard (an http page, an old browser): the old way, through a selected textarea
+    const ta = document.createElement('textarea'); ta.value = text; ta.setAttribute('readonly', '');
+    ta.style.cssText = 'position:fixed;top:0;left:0;opacity:0;'; document.body.appendChild(ta); ta.select();
+    let ok = false; try { ok = document.execCommand('copy'); } catch { /* nothing left to try */ }
+    ta.remove(); return ok;
+  }
+}
+
 function clickAt(x, y) {
   const ndc = new THREE.Vector2((x / innerWidth) * 2 - 1, -(y / innerHeight) * 2 + 1);
   // creatures in the window: bray / crow on click
@@ -429,6 +453,11 @@ function clickAt(x, y) {
       if (tv.on) tvOff(); else { sound.tvClick(); tv.setPower(true); }
       return;
     }
+  }
+  // in front of the TV, a tap on a copy key (the IBAN and the name on page 800) copies it to the clipboard
+  if (rig.focus?.lean === TV_LEAN) {
+    const copy = tvCopyAt(ray);
+    if (copy) { sound.tvClick(); copyText(copy.value).then((ok) => { if (ok) teletext.showCopied(copy); }); return; }
   }
   // in front of the TV, a tap on the screen turns to the next subpage (back to the first after the last)
   if (rig.focus?.lean === TV_LEAN && !teletext.av && ray.intersectObject(tv.screen).length && teletext.subCount() > 1) { sound.tvClick(); teletext.step(1); return; }
@@ -851,4 +880,4 @@ if (params.has('shelf')) setTimeout(() => {
   if (params.has('book')) setTimeout(() => shelfView.pull(shelfView.row.books[+params.get('book')] ?? shelfView.row.books[0]), 900);
 }, 300);
 if (params.has('focus')) setTimeout(() => activate(HOT.find((h) => h.id === params.get('focus'))), 300);
-window.__scene = { scene, camera, renderer, dens, rig, teletext, typewriter, view, HOT, activate, shelfView, bike, racket, bass, BASS_HOT, PRINTS_HOT, board, openPhotos, sound };
+window.__scene = { scene, camera, renderer, dens, rig, teletext, tv, typewriter, view, HOT, activate, shelfView, bike, racket, bass, BASS_HOT, PRINTS_HOT, board, openPhotos, sound };

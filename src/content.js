@@ -86,6 +86,11 @@ export const GIFTS = {
     ['IBAN IT74Q0760111200001011465331', 'Intestato a Paola Chini'],
     ['Per spedire: Via Ubertosa, 19', '25047 - Darfo B.T. (BS)'],
   ],
+  // on the televideo, the line that holds each of these gets a copy key: a click or tap on it copies the value
+  copy: [
+    { label: 'IBAN', value: 'IT74Q0760111200001011465331' },
+    { label: 'Nome', value: 'Paola Chini' },
+  ],
 };
 
 // Five short stories (≤ 250 words each), once the notebooks on the desk. The notebooks made room for
