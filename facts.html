@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Gabriele &amp; Paola · Solo i fatti</title>
+<title>Gabriele &amp; Paola · Tutte le info (se sei di fretta)</title>
 <link rel="icon" href="favicon.ico" sizes="48x48">
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link rel="icon" href="assets/icons/favicon-32.png" type="image/png" sizes="32x32">
@@ -30,6 +30,8 @@
   const dl = (rows) => `<dl>${rows.map(([a, b]) => `<dt>${e(a)}</dt><dd>${e(b)}</dd>`).join('')}</dl>`;
   const ps = (list) => list.map((t) => `<p>${e(t)}</p>`).join('');
   const sec = (s) => `<h2>${e(s.title)}</h2>${ps(s.text)}`;
+  // The dress code question only points the TV to page 400; here the dress code section is right above it.
+  const faq = FAQ.filter(([q]) => q !== 'C’è un dress code?');
   document.getElementById('facts').innerHTML = `
     <h1>${e(WEDDING.names)}</h1>
     <p class="lead">${e(WEDDING.dateLong)} · ${e(WEDDING.villa)}, ${e(WEDDING.address)}</p>
@@ -39,7 +41,7 @@
     ${sec(WEATHER)}
     ${sec(DRESS)}
     <h2>${e(RSVP.title)}</h2><p>Potete confermarci la vostra presenza, entro il ${e(WEDDING.rsvpBy)}, con la macchina da scrivere nello <a href="index.html?focus=typewriter">studio</a>.</p>
-    <h2>Domande frequenti</h2>${FAQ.map(([q, a]) => `<p><b>${e(q)}</b></p>${ps(a)}`).join('')}`;
+    <h2>Domande frequenti</h2>${faq.map(([q, a]) => `<p><b>${e(q)}</b></p>${ps(a)}`).join('')}`;
 </script>
 </body>
 </html>
