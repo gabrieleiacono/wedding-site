@@ -48,26 +48,34 @@ export function buildPrints(room) {
   return { group: g, center: g.position.clone().add(new THREE.Vector3(0, 0, 0.015)), isPrints: inside(g) };
 }
 
-// --- Il poster dei Mumin ------------------------------------------------------------------------------------
-// Their Moomin print above the TV: Moomintroll and Snorkmaiden hugging among the daisies, a 50 × 70 poster
-// (the picture as given, cream border and all) in a thin light-oak frame like the window's and the door's.
-// Hung high enough that the TV's rabbit ears stay below it, centred on the set. A tap takes you up to it.
-const POSTER_URL = 'assets/posters/moomin.jpg'; // 1120 × 1600, from the 2000 × 2857 original
-export function buildPoster(room) {
-  const g = new THREE.Group(); room.add(g);
-  const w = 0.5, h = w * 2857 / 2000, f = 0.022;
-  const mat = makeInk({ color: '#F2EBE3', wash: 1, hatch: 0.12, lift: 0 }); // the cream border until the picture arrives
-  new THREE.TextureLoader().load(POSTER_URL, (t) => {
-    t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
-    mat.map = t; mat.color.set('#ffffff'); mat.needsUpdate = true;
+// --- I poster sopra la TV ----------------------------------------------------------------------------------
+// Two posters side by side above the TV, the pictures as given: on the right their Moomin print
+// (Moomintroll and Snorkmaiden hugging among the daisies, 50 × 70, cream border and all) in a thin
+// light-oak frame like the window's and the door's; on the left The Matrix's one-sheet (50 × 75) in black.
+// Same width, centred on one line, hung high enough that the TV's rabbit ears stay below them (the left
+// rod's tip points into the gap) and kept clear of the wall clock. A tap on either takes you up to it.
+const POSTERS = [
+  { id: 'matrix', url: 'assets/posters/matrix.jpg', ratio: 2250 / 1500, z: -0.952, until: '#16301E', frame: ['#24201C', { wash: 0.9 }] }, // 1066 × 1600, from 1500 × 2250
+  { id: 'moomin', url: 'assets/posters/moomin.jpg', ratio: 2857 / 2000, z: -0.288, until: '#F2EBE3', frame: ['#C99A5E', { wash: 0.88, hatch: 0.35 }] }, // 1120 × 1600, from 2000 × 2857
+];
+export function buildPosters(room) {
+  const w = 0.5, f = 0.022, mid = 2.22; // the shared centre line (the Moomin's bottom edge at 1.84 m)
+  const posters = POSTERS.map((p) => {
+    const g = new THREE.Group(); room.add(g);
+    const h = w * p.ratio;
+    const mat = makeInk({ color: p.until, wash: 1, hatch: 0.12, lift: 0 }); // its main colour until the picture arrives
+    new THREE.TextureLoader().load(p.url, (t) => {
+      t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+      mat.map = t; mat.color.set('#ffffff'); mat.needsUpdate = true;
+    });
+    g.add(framed(w, h, mat, paint(...p.frame), f, 0.026)); // (plain oak: at this size a grain only reads as dark lines)
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.025, depthWrite: false }));
+    glass.position.z = 0.02; glass.raycast = () => {}; g.add(glass);
+    g.rotation.y = -Math.PI / 2; // facing the room from the east wall
+    g.position.set(ROOM.hx - 0.004, mid, p.z);
+    return { id: p.id, group: g, center: g.position.clone().add(new THREE.Vector3(-0.015, 0, 0)), size: { w: w + 2 * f, h: h + 2 * f }, is: inside(g) };
   });
-  const oak = paint('#C99A5E', { wash: 0.88, hatch: 0.35 }); // light oak, plain: at this size a grain only reads as dark lines
-  const fr = framed(w, h, mat, oak, f, 0.026); g.add(fr);
-  const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.025, depthWrite: false }));
-  glass.position.z = 0.02; glass.raycast = () => {}; g.add(glass);
-  g.rotation.y = -Math.PI / 2; // facing the room from the east wall
-  g.position.set(ROOM.hx - 0.004, 1.84 + f + h / 2, -0.55); // over the TV (z −0.55), its bottom edge at 1.84 m
-  return { group: g, center: g.position.clone().add(new THREE.Vector3(-0.015, 0, 0)), size: { w: w + 2 * f, h: h + 2 * f }, isPoster: inside(g) };
+  return { posters, at: (o) => posters.find((p) => p.is(o)) };
 }
 
 // --- 6 · Il cestino delle bozze ---------------------------------------------------------------------------
