@@ -8,7 +8,7 @@ import { buildTypewriterModel } from './typewriter-model.js';
 export const STEPS = [
   { id: 'name', q: 'COME TI CHIAMI?', label: 'NOME' },
   { id: 'coming', q: 'CI SARAI? (S/N)', label: 'CI SARÀ', yn: true },
-  { id: 'allergies', q: 'ALLERGIE?', label: 'ALLERGIE', onlyIfComing: true },
+  { id: 'allergies', q: 'HAI ALLERGIE, INTOLLERANZE O PREFERENZE ALIMENTARI?', label: 'ALIMENTAZIONE', onlyIfComing: true },
   { id: 'message', q: 'UN MESSAGGIO?', label: 'MSG' },
 ];
 const PAPER_W = 0.21, PAPER_H = 0.297, LINE_H = 0.0135, MARGIN_TOP = 0.032, COLS = 27;
@@ -125,6 +125,7 @@ export class Typewriter {
   startLine() {
     const st = STEPS[this.step];
     this.lines[this.lines.length - 1].prefix = st.label + ': ';
+    this.stepStart = performance.now(); // a question too long for the LCD scrolls past from here
     this.drawPaper();
   }
   appendChar() {
@@ -209,7 +210,13 @@ export class Typewriter {
       const cursor = Math.floor(now / 450) % 2 ? '_' : ' ';
       const display = this.answers.coming === false && st.id === 'message' ? 3 : shown;
       text = `${display}/${total} ${st.q} ${this.value.toUpperCase()}${cursor}`;
-      if (text.length > 26) text = text.slice(text.length - 26);
+      if (text.length > 26 && !this.value) {
+        // nothing typed yet: a long question scrolls across, pausing at its start and at its end
+        const over = text.length - 26, t = now - (this.stepStart || 0);
+        const cycle = 1200 + over * 200 + 1600;
+        const at = Math.max(0, Math.min(over, Math.floor(((t % cycle) - 1200) / 200)));
+        text = text.slice(at, at + 26);
+      } else if (text.length > 26) text = text.slice(text.length - 26);
     }
     return text;
   }
