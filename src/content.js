@@ -68,7 +68,7 @@ export const FAQ = [
   ['Chi è che si sposa?', ['Paola e Gabriele!']],
   ['C’è un dress code?', ['Vai a pagina 400 del televideo']],
   ['C’è parcheggio?', ['Sì, troverete tutto il parcheggio di cui avete bisogno.']],
-  ['Se ho allergie, intolleranze o seguo un regime alimentare non convenzionale', [
+  ['Hai allergie, intolleranze o preferenze alimentari?', [
     'Nessun problema! Segnalatecelo quanto prima in modo da organizzare al meglio il nostro banchetto, senza pensieri e preoccupazioni.',
     'In ogni caso, segnalatelo anche ai camerieri quel giorno, affinché non ci siano incidenti.',
   ]],
