@@ -110,6 +110,21 @@ function sailingShip(x, s, col) {
   x.beginPath(); x.moveTo(-s * 0.26, -s * 0.34); x.quadraticCurveTo(-s * 0.2, -s * 0.1, -s * 0.26, s * 0.06); x.lineTo(s * 0.26, s * 0.06); x.quadraticCurveTo(s * 0.32, -s * 0.1, s * 0.26, -s * 0.34); x.closePath(); x.fill();
   x.restore();
 }
+// Il Saggiatore's mark since its 2021 redesign: a red rounded square with a white S, an arrow through its foot
+function saggiatoreS(x, s, col) {
+  const h = s * 0.92;
+  x.save(); x.fillStyle = col; roundRect(x, -h / 2, -h / 2, h, h, h * 0.36); x.fill();
+  x.strokeStyle = '#fff'; x.fillStyle = '#fff'; x.lineCap = 'round';
+  x.lineWidth = h * 0.075;
+  x.beginPath(); // the S: an upper bowl opening right, a lower bowl opening left
+  x.arc(-h * 0.02, -h * 0.13, h * 0.17, -0.25 * Math.PI, 0.5 * Math.PI, true);
+  x.arc(-h * 0.02, h * 0.21, h * 0.17, -0.5 * Math.PI, 0.85 * Math.PI, false);
+  x.stroke();
+  x.lineWidth = h * 0.045; // the arrow, from the S's tail out to the right
+  x.beginPath(); x.moveTo(-h * 0.3, h * 0.16); x.lineTo(h * 0.3, h * 0.16); x.stroke();
+  x.beginPath(); x.moveTo(h * 0.37, h * 0.16); x.lineTo(h * 0.25, h * 0.08); x.lineTo(h * 0.25, h * 0.24); x.closePath(); x.fill();
+  x.restore();
+}
 /** Draw a publisher's mark centred at (cx, cy) in a spine of width w (mm). */
 export function drawLogo(x, pub, cx, cy, size, col, w) {
   const p = String(pub || '').toLowerCase().replace(/[^a-z]/g, '');
@@ -124,6 +139,7 @@ export function drawLogo(x, pub, cx, cy, size, col, w) {
   else if (p.includes('littlebrown')) { wordmark(x, 'LITTLE,', s, col, 'Libre Baskerville', w, { weight: 700, k: 0.2 }); x.translate(0, s * 0.24); wordmark(x, 'BROWN', s, col, 'Libre Baskerville', w, { weight: 700, k: 0.2 }); }
   else if (p.includes('spiga')) { x.strokeStyle = col; x.lineWidth = s * 0.05; x.beginPath(); x.ellipse(0, 0, s * 0.26, s * 0.5, 0, 0, Math.PI * 2); x.stroke(); x.scale(0.8, 0.8); wheatEar(x, s, col); }
   else if (p.includes('ippocampo')) wordmark(x, "L'Ippocampo", s, col, 'EB Garamond', w, { weight: 600, italic: true, k: 0.3 });
+  else if (p.includes('saggiatore') && p.includes('mark')) saggiatoreS(x, s, col);
   else if (p.includes('saggiatore')) { wordmark(x, 'il', s, col, 'EB Garamond', w, { weight: 500, italic: true, k: 0.26 }); x.translate(0, s * 0.28); wordmark(x, 'Saggiatore', s, col, 'EB Garamond', w, { weight: 600, k: 0.3 }); }
   else if (p.includes('nave') || p.includes('teseo')) sailingShip(x, s, col);
   else if (p.includes('terre')) wordmark(x, 'terre di mezzo', s, col, 'Jost', w, { weight: 600, k: 0.26 });
