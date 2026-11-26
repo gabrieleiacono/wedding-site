@@ -237,6 +237,12 @@ function drawElement(x, el, W, H, c) {
   } else if (t === 'motif' || t === 'illustration') {
     const a = yOf(el.from ?? 0.85, H), b = yOf(el.to ?? 0.95, H);
     motif(x, el, W / 2, (a + b) / 2, Math.min(W * 0.8, b - a), c.r);
+  } else if (t === 'star') {
+    // a five-pointed star (the little stars printed on a spine), x and y as fractions of the spine
+    const R = (el.size_mm ?? W * 0.3) / 2;
+    x.save(); x.translate((el.x ?? 0.5) * W, yOf(el.y ?? 0.5, H)); x.rotate(el.rotate ?? 0); x.fillStyle = col;
+    x.beginPath(); for (let k = 0; k < 10; k++) { const a = -Math.PI / 2 + k * Math.PI / 5, rr = k % 2 ? R * 0.45 : R; x.lineTo(Math.cos(a) * rr, Math.sin(a) * rr); } x.closePath(); x.fill();
+    x.restore();
   } else if (t === 'dot' || t === 'circle') {
     x.fillStyle = col; x.beginPath(); x.arc((el.x ?? 0.5) * W, yOf(el.y ?? 0.5, H), (el.size_mm ?? W * 0.3) / 2, 0, Math.PI * 2); x.fill();
   }
@@ -304,7 +310,10 @@ function drawText(x, el, W, H, col, c) {
   let y0, y1;
   if (el.y_to != null) { y0 = yOf(el.y, H); y1 = yOf(el.y_to, H); if (y1 < y0) [y0, y1] = [y1, y0]; }
   else { const yc = yOf(el.y ?? 0.5, H); const half = Math.min(yc, H - yc) * 0.96; y0 = yc - half; y1 = yc + half; if (el.span != null) { const sp = yOf(el.span, H) / 2; y0 = yc - sp; y1 = yc + sp; } }
-  const cx = (el.x ?? 0.5) * W, cy = (y0 + y1) / 2;
+  // align 'start': the line starts at the head end of its range (y for text reading down, y_to reading up)
+  // instead of being centred in it, as on spines whose lines all start at the same height
+  const start = el.align === 'start' && vertical;
+  const cx = (el.x ?? 0.5) * W, cy = start ? (down ? y0 : y1) : (y0 + y1) / 2;
   const across = vertical ? W : (y1 - y0), along = vertical ? (y1 - y0) : W;
   let size = el.size_mm ?? (el.role === 'author' ? W * 0.42 : el.role === 'title' ? W * 0.5 : W * 0.32);
   // a line's em must fit across the spine, with a little margin
@@ -312,7 +321,7 @@ function drawText(x, el, W, H, col, c) {
   if (vertical) size = Math.min(size, maxEm);
   x.save(); x.translate(cx, cy);
   if (vertical) x.rotate(down ? Math.PI / 2 : -Math.PI / 2);
-  x.fillStyle = col; x.textAlign = 'center'; x.textBaseline = 'middle';
+  x.fillStyle = col; x.textAlign = start ? 'left' : 'center'; x.textBaseline = 'middle';
   const track = el.letter_spacing ?? (el.uppercase ? 0.06 : 0);
   const setFont = () => { x.font = `${ital}${weight} ${size}px "${fam}"`; if ('letterSpacing' in x) x.letterSpacing = `${(track * size).toFixed(2)}px`; };
   setFont();
