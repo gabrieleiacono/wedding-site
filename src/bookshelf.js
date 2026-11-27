@@ -40,7 +40,7 @@ const MINI_YAW = -2.09;
 export function buildBookshelf(room) {
   const g = new THREE.Group(); room.add(g);
   const r = rng(1998);
-  const z = ROOM.hz, W = 2.4, H = 2.12, D = 0.32, x0 = 0.15;
+  const z = ROOM.sz, W = 2.4, H = 2.12, D = 0.32, x0 = 0.15;
   const back = z - 0.005, front = z - D;
   const sh = 6, inner = (H - 0.08) / sh, board = 0.025, clear = inner - board;
   box(0.03, H, D, M.pine, x0 - W / 2, H / 2, z - D / 2, g);

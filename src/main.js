@@ -83,7 +83,7 @@ const bass = buildBass(room); // the bass on its hanger, in the corner of the de
 bass.hooks.pluck = (i) => sound.pluck(i);
 const board = buildBacheca(room); // the cork board with their photos, between the bass and the window
 const prints = buildPrints(room); // two prints, right of the window: Valle Camonica and Modica
-const posters = buildPosters(room); // the Matrix and Moomin posters, above the TV
+const posters = buildPosters(room); // the Matrix and Moomin posters above the TV, and the Roland-Garros ones
 buildBin(room); // the wicker bin of drafts, right of the desk (just to look at)
 buildRug(room); // the frazzata on the floor
 const shelfView = new ShelfView({ shelf: shelf.shelf, sound });
@@ -101,9 +101,9 @@ scene.add(hemi);
 const sun = new THREE.DirectionalLight('#FFC88A', 4);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
-Object.assign(sun.shadow.camera, { left: -3.2, right: 3.2, top: 3.2, bottom: -3.2, near: 1, far: 20 });
+Object.assign(sun.shadow.camera, { left: -3.8, right: 3.8, top: 3.8, bottom: -3.8, near: 1, far: 20 });
 sun.shadow.bias = -0.0004; sun.shadow.normalBias = 0.02;
-sun.target.position.set(0.3, 0.6, 0.2);
+sun.target.position.set(0.3, 0.6, 0.6);
 scene.add(sun, sun.target);
 const lamp = new THREE.PointLight('#FFD9A0', 0, 2.6, 1.8);
 lamp.position.copy(anchors.lampBulb);
@@ -351,8 +351,8 @@ const BOARD_LEAN = () => frameView({ pts: around(board.center, BOARD.w / 2 + 0.0
 const boardHelp = () => { $('#help').hidden = false; $('#help').textContent = `Tocca una foto per sfogliarle tutte (${board.count})`; };
 // The two prints, straight on.
 const PRINTS_HOT = { id: 'prints', wall: 0, lean: () => frameView({ pts: around(prints.center, 0.4, 0.25, 0.02), dir: new THREE.Vector3(0, -0.04, -1).normalize(), fov: portrait() ? 50 : 40 }) };
-// The posters above the TV, each straight on.
-const POSTER_HOTS = Object.fromEntries(posters.posters.map((p) => [p.id, { id: 'poster-' + p.id, wall: 1, lean: () => frameView({ pts: around(p.center, 0.02, p.size.h / 2 + 0.02, p.size.w / 2 + 0.02), dir: new THREE.Vector3(1, 0.04, 0).normalize(), fov: portrait() ? 50 : 40 }) }]));
+// The posters on the long walls, each straight on.
+const POSTER_HOTS = Object.fromEntries(posters.posters.map((p) => { const s = p.wall === 'E' ? 1 : -1; return [p.id, { id: 'poster-' + p.id, wall: s > 0 ? 1 : 3, lean: () => frameView({ pts: around(p.center, 0.02, p.size.h / 2 + 0.02, p.size.w / 2 + 0.02), dir: new THREE.Vector3(s, 0.04, 0).normalize(), fov: portrait() ? 50 : 40 }) }]; }));
 
 // --- hotspots ----------------------------------------------------------------------------
 const HOT = [

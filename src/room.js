@@ -1,4 +1,5 @@
-// The study (design F2): 4.2 × 3.6 m, ceiling 2.9 m. x = east, -z = north, y = up.
+// The study (design F2): 4.2 × 5.4 m, ceiling 2.9 m. x = east, -z = north, y = up.
+// The window wall stays at z = -hz; the bookshelf wall was pushed 1.8 m further back (to z = sz) to make room for the posters.
 // Wall A (north): desk + window · B (east): TV · C (south): bookshelf · D (west): door, phone, calendar.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
@@ -6,7 +7,7 @@ import { buildSirio } from './phone.js';
 import { buildPagineGialle } from './paginegialle.js';
 import { buildLamp } from './lamp.js';
 
-export const ROOM = { w: 4.2, d: 3.6, h: 2.9, hx: 2.1, hz: 1.8 };
+export const ROOM = { w: 4.2, d: 5.4, h: 2.9, hx: 2.1, hz: 1.8, sz: 3.6, cz: 0.9 }; // hz: the north wall at -hz · sz: the south wall · cz: the middle, front to back
 export const WINDOW = { x0: -0.62, x1: 0.62, y0: 0.88, y1: 2.35 };
 export const EYE = new THREE.Vector3(0, 1.15, -0.72);
 
@@ -107,16 +108,16 @@ export function extrude(shape, depth, mat, bevel = 0.003, seg = 3) {
 export function buildRoom(scene) {
   const room = new THREE.Group();
   scene.add(room);
-  const { hx, hz, h } = ROOM;
+  const { hx, hz, sz, cz, h } = ROOM;
   const T = 0.12; // wall thickness
 
   // floor + ceiling
-  box(ROOM.w + 0.4, 0.05, ROOM.d + 0.4, M.floor, 0, -0.025, 0, room);
-  box(ROOM.w + 0.4, 0.05, ROOM.d + 0.4, M.ceiling, 0, h + 0.025, 0, room);
+  box(ROOM.w + 0.4, 0.05, ROOM.d + 0.4, M.floor, 0, -0.025, cz, room);
+  box(ROOM.w + 0.4, 0.05, ROOM.d + 0.4, M.ceiling, 0, h + 0.025, cz, room);
   // east, south, west walls
-  box(T, h, ROOM.d, M.wall, hx + T / 2, h / 2, 0, room);
-  box(ROOM.w, h, T, M.wall, 0, h / 2, hz + T / 2, room);
-  box(T, h, ROOM.d, M.wall, -hx - T / 2, h / 2, 0, room);
+  box(T, h, ROOM.d, M.wall, hx + T / 2, h / 2, cz, room);
+  box(ROOM.w, h, T, M.wall, 0, h / 2, sz + T / 2, room);
+  box(T, h, ROOM.d, M.wall, -hx - T / 2, h / 2, cz, room);
   // north wall with the window opening
   const W = WINDOW, nz = -hz - T / 2;
   box(W.x0 + hx, h, T, M.wall, (-hx + W.x0) / 2, h / 2, nz, room);
@@ -127,13 +128,13 @@ export function buildRoom(scene) {
   // skirting boards
   const sk = 0.08;
   box(ROOM.w, sk, 0.015, M.walnut, 0, sk / 2, -hz + 0.008, room);
-  box(ROOM.w, sk, 0.015, M.walnut, 0, sk / 2, hz - 0.008, room);
-  box(0.015, sk, ROOM.d, M.walnutZ, hx - 0.008, sk / 2, 0, room);
-  box(0.015, sk, ROOM.d, M.walnutZ, -hx + 0.008, sk / 2, 0, room);
+  box(ROOM.w, sk, 0.015, M.walnut, 0, sk / 2, sz - 0.008, room);
+  box(0.015, sk, ROOM.d, M.walnutZ, hx - 0.008, sk / 2, cz, room);
+  box(0.015, sk, ROOM.d, M.walnutZ, -hx + 0.008, sk / 2, cz, room);
 
   // ceiling light: a simple glass dome
   const dome = new THREE.Mesh(new THREE.SphereGeometry(0.22, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), M.white);
-  dome.rotation.x = Math.PI; dome.position.set(0, h - 0.01, 0.1); room.add(dome);
+  dome.rotation.x = Math.PI; dome.position.set(0, h - 0.01, cz); room.add(dome);
 
   const anchors = {};
   buildWindowFrame(room, anchors);
