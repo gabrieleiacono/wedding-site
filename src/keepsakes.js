@@ -62,12 +62,12 @@ const OAK = ['#C99A5E', { wash: 0.88, hatch: 0.35 }], BLACK = ['#24201C', { wash
 const POSTERS = [
   { id: 'matrix', url: 'assets/posters/matrix.jpg', ratio: 2250 / 1500, wall: 'E', z: -0.952, until: '#16301E', frame: BLACK }, // 1066 × 1600, from 1500 × 2250
   { id: 'moomin', url: 'assets/posters/moomin.jpg', ratio: 2857 / 2000, wall: 'E', z: -0.288, until: '#F2EBE3', frame: OAK }, // 1120 × 1600, from 2000 × 2857
-  { id: 'rg2025', draw: R.mathieu2025, wall: 'E', z: 1.06, frame: BLACK },
-  { id: 'rg1991', draw: R.miro1991, wall: 'E', z: 1.9, frame: OAK },
-  { id: 'rg1982', draw: R.folon1982, wall: 'E', z: 2.74, frame: OAK },
+  { id: 'rg2025', draw: R.mathieu2025, wall: 'E', z: 1.0, frame: BLACK },
+  { id: 'rg1991', draw: R.miro1991, wall: 'E', z: 1.664, frame: OAK },
+  { id: 'rg1982', draw: R.folon1982, wall: 'E', z: 2.328, frame: OAK },
   { id: 'rg1980', draw: R.adami1980, wall: 'W', z: -1.12, frame: OAK },
-  { id: 'rg1984', draw: R.aillaud1984, wall: 'W', z: 1.8, frame: OAK },
-  { id: 'rg1981', draw: R.arroyo1981, wall: 'W', z: 2.96, frame: OAK },
+  { id: 'rg1984', draw: R.aillaud1984, wall: 'W', z: 1.52, frame: OAK },
+  { id: 'rg1981', draw: R.arroyo1981, wall: 'W', z: 2.26, frame: OAK },
 ];
 const HAND_FONTS = ['500 40px Caveat', '400 40px "Archivo Narrow"', '700 40px "Archivo Narrow"'];
 export function buildPosters(room) {
