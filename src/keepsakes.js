@@ -10,6 +10,7 @@ import * as THREE from '../vendor/three.module.min.js'; // by path, not an impor
 import { makeInk } from './ink.js';
 import { ROOM, box } from './room.js';
 import * as A from './keepsakes-art.js';
+import * as R from './rg-posters-art.js';
 
 const tex = (c, o = {}) => {
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
@@ -48,33 +49,55 @@ export function buildPrints(room) {
   return { group: g, center: g.position.clone().add(new THREE.Vector3(0, 0, 0.015)), isPrints: inside(g) };
 }
 
-// --- I poster sopra la TV ----------------------------------------------------------------------------------
-// Two posters side by side above the TV, the pictures as given: on the right their Moomin print
-// (Moomintroll and Snorkmaiden hugging among the daisies, 50 × 70, cream border and all) in a thin
-// light-oak frame like the window's and the door's; on the left The Matrix's one-sheet (50 × 75) in black.
-// Same width, centred on one line, hung high enough that the TV's rabbit ears stay below them (the left
-// rod's tip points into the gap) and kept clear of the wall clock. A tap on either takes you up to it.
+// --- I poster ------------------------------------------------------------------------------------------------
+// Framed posters along the two long walls, all on one centre line 5 cm below the wall clock's centre.
+// Above the TV, the pictures as given: on the left The Matrix's one-sheet (50 × 75) in black, on the right
+// their Moomin print (Moomintroll and Snorkmaiden hugging among the daisies, 50 × 70, cream border and all)
+// in a thin light-oak frame like the window's and the door's.
+// Then six Roland-Garros posters, redrawn by hand (rg-posters-art.js) on a white mount in light oak, the
+// newest in black: past the clock the 2025 one, Miró's 1991 and Folon's 1982 (east wall); Adami's 1980,
+// the first of them all, above the phone table, Aillaud's 1984 past the door and Arroyo's 1981, Borg from
+// behind, in the corner by the wooden racket (west wall). A tap on any of them takes you up to it.
+const OAK = ['#C99A5E', { wash: 0.88, hatch: 0.35 }], BLACK = ['#24201C', { wash: 0.9 }];
 const POSTERS = [
-  { id: 'matrix', url: 'assets/posters/matrix.jpg', ratio: 2250 / 1500, z: -0.952, until: '#16301E', frame: ['#24201C', { wash: 0.9 }] }, // 1066 × 1600, from 1500 × 2250
-  { id: 'moomin', url: 'assets/posters/moomin.jpg', ratio: 2857 / 2000, z: -0.288, until: '#F2EBE3', frame: ['#C99A5E', { wash: 0.88, hatch: 0.35 }] }, // 1120 × 1600, from 2000 × 2857
+  { id: 'matrix', url: 'assets/posters/matrix.jpg', ratio: 2250 / 1500, wall: 'E', z: -0.952, until: '#16301E', frame: BLACK }, // 1066 × 1600, from 1500 × 2250
+  { id: 'moomin', url: 'assets/posters/moomin.jpg', ratio: 2857 / 2000, wall: 'E', z: -0.288, until: '#F2EBE3', frame: OAK }, // 1120 × 1600, from 2000 × 2857
+  { id: 'rg2025', draw: R.mathieu2025, wall: 'E', z: 1.06, frame: BLACK },
+  { id: 'rg1991', draw: R.miro1991, wall: 'E', z: 1.9, frame: OAK },
+  { id: 'rg1982', draw: R.folon1982, wall: 'E', z: 2.74, frame: OAK },
+  { id: 'rg1980', draw: R.adami1980, wall: 'W', z: -1.12, frame: OAK },
+  { id: 'rg1984', draw: R.aillaud1984, wall: 'W', z: 1.8, frame: OAK },
+  { id: 'rg1981', draw: R.arroyo1981, wall: 'W', z: 2.96, frame: OAK },
 ];
+const HAND_FONTS = ['500 40px Caveat', '400 40px "Archivo Narrow"', '700 40px "Archivo Narrow"'];
 export function buildPosters(room) {
-  const w = 0.5, f = 0.022, mid = 2.22; // the shared centre line (the Moomin's bottom edge at 1.84 m)
+  const w = 0.5, f = 0.022, mid = 1.7; // the shared centre line: 5 cm below the clock's centre (tv.js)
+  const redraw = [];
   const posters = POSTERS.map((p) => {
     const g = new THREE.Group(); room.add(g);
-    const h = w * p.ratio;
-    const mat = makeInk({ color: p.until, wash: 1, hatch: 0.12, lift: 0 }); // its main colour until the picture arrives
-    new THREE.TextureLoader().load(p.url, (t) => {
-      t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
-      mat.map = t; mat.color.set('#ffffff'); mat.needsUpdate = true;
-    });
+    let mat, ratio = p.ratio;
+    if (p.url) {
+      mat = makeInk({ color: p.until, wash: 1, hatch: 0.12, lift: 0 }); // its main colour until the picture arrives
+      new THREE.TextureLoader().load(p.url, (t) => {
+        t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = 8;
+        mat.map = t; mat.color.set('#ffffff'); mat.needsUpdate = true;
+      });
+    } else {
+      const c = p.draw(), t = tex(c); ratio = c.height / c.width;
+      mat = makeInk({ color: '#ffffff', wash: 0.96, map: t, hatch: 0.16, lift: 0.04 });
+      redraw.push(() => { t.image = p.draw(); t.needsUpdate = true; });
+    }
+    const h = w * ratio;
     g.add(framed(w, h, mat, paint(...p.frame), f, 0.026)); // (plain oak: at this size a grain only reads as dark lines)
     const glass = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.025, depthWrite: false }));
     glass.position.z = 0.02; glass.raycast = () => {}; g.add(glass);
-    g.rotation.y = -Math.PI / 2; // facing the room from the east wall
-    g.position.set(ROOM.hx - 0.004, mid, p.z);
-    return { id: p.id, group: g, center: g.position.clone().add(new THREE.Vector3(-0.015, 0, 0)), size: { w: w + 2 * f, h: h + 2 * f }, is: inside(g) };
+    const s = p.wall === 'E' ? 1 : -1; // facing the room from the east wall, or from the west
+    g.rotation.y = -s * Math.PI / 2;
+    g.position.set(s * (ROOM.hx - 0.004), mid, p.z);
+    return { id: p.id, group: g, wall: p.wall, center: g.position.clone().add(new THREE.Vector3(-s * 0.015, 0, 0)), size: { w: w + 2 * f, h: h + 2 * f }, is: inside(g) };
   });
+  // the hand lettering wants the page's fonts: draw the Roland-Garros ones again once they are in
+  if (typeof document !== 'undefined' && document.fonts) Promise.all(HAND_FONTS.map((ft) => document.fonts.load(ft).catch(() => null))).then(() => redraw.forEach((r) => r()));
   return { posters, at: (o) => posters.find((p) => p.is(o)) };
 }
 

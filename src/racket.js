@@ -134,7 +134,7 @@ function laminateTexture() {
 
 export function buildRacket(room) {
   const outer = new THREE.Group(); room.add(outer);
-  outer.position.set(NAIL.x, NAIL.y, ROOM.hz - DEPTH / 2 - 0.002);
+  outer.position.set(NAIL.x, NAIL.y, ROOM.sz - DEPTH / 2 - 0.002);
   outer.rotation.y = Math.PI; // its front faces into the room (-z)
   const swing = new THREE.Group(); outer.add(swing); // turns about the nail
   // the leather grip is thicker than the frame, so the racket leans out from the wall a little at the bottom
