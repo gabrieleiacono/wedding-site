@@ -1,5 +1,5 @@
-// The study (design F2): 4.2 × 5.4 m, ceiling 2.9 m. x = east, -z = north, y = up.
-// The window wall stays at z = -hz; the bookshelf wall was pushed 1.8 m further back (to z = sz) to make room for the posters.
+// The study (design F2): 4.2 × 4.5 m, ceiling 2.9 m. x = east, -z = north, y = up.
+// The window wall stays at z = -hz; the bookshelf wall was pushed 90 cm further back (to z = sz) to make room for the posters.
 // Wall A (north): desk + window · B (east): TV · C (south): bookshelf · D (west): door, phone, calendar.
 import * as THREE from '../vendor/three.module.min.js'; // by path, not an import map: Firefox ignores the map on the claude.ai preview
 import { makeInk } from './ink.js';
@@ -7,7 +7,7 @@ import { buildSirio } from './phone.js';
 import { buildPagineGialle } from './paginegialle.js';
 import { buildLamp } from './lamp.js';
 
-export const ROOM = { w: 4.2, d: 5.4, h: 2.9, hx: 2.1, hz: 1.8, sz: 3.6, cz: 0.9 }; // hz: the north wall at -hz · sz: the south wall · cz: the middle, front to back
+export const ROOM = { w: 4.2, d: 4.5, h: 2.9, hx: 2.1, hz: 1.8, sz: 2.7, cz: 0.45 }; // hz: the north wall at -hz · sz: the south wall · cz: the middle, front to back
 export const WINDOW = { x0: -0.62, x1: 0.62, y0: 0.88, y1: 2.35 };
 export const EYE = new THREE.Vector3(0, 1.15, -0.72);
 
